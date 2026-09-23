@@ -426,6 +426,12 @@ a {
   gap: 1rem;
 }
 
+.field__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--mist);
+}
+
 .field--inline input[type="color"] {
   width: 3rem;
   height: 2.25rem;
@@ -471,10 +477,16 @@ a {
   border-radius: 50%;
 }
 
+.hex-add__hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--mist);
+}
+
 .hex-add {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .hex-add__input {

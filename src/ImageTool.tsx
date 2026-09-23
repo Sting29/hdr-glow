@@ -459,6 +459,8 @@ export function ImageTool({ support }: Props) {
                 ) : null}
               </ul>
 
+              <p className="hex-add__hint">Know the exact color? Type its hex code to add it here.</p>
+
               <form
                 className="hex-add"
                 onSubmit={(event) => {
@@ -550,14 +552,20 @@ export function ImageTool({ support }: Props) {
               />
             </label>
 
-            <label className="field field--inline">
-              <span>Background behind transparent areas</span>
-              <input
-                type="color"
-                value={background}
-                onChange={(event) => setBackground(event.target.value)}
-              />
-            </label>
+            <div className="field">
+              <label className="field--inline">
+                <span>Background behind transparent areas</span>
+                <input
+                  type="color"
+                  value={background}
+                  onChange={(event) => setBackground(event.target.value)}
+                />
+              </label>
+              <p className="field__hint">
+                JPEG can&apos;t stay transparent, so pick the color that should show through
+                instead, to match your page.
+              </p>
+            </div>
           </div>
 
           <section className="preview" aria-label="Preview">
