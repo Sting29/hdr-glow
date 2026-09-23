@@ -1,11 +1,12 @@
 // Real logos to try the tool with, bundled with the site so nothing is fetched
 // from outside it.
 
-export type SampleId = "lighthouse" | "kbtech";
+export type SampleId = "lighthouse" | "kbtech" | "arctic";
 
 export const SAMPLES: { id: SampleId; label: string; url: string; type: string }[] = [
   { id: "lighthouse", label: "Lighthouse", url: "/samples/lighthouse.jpg", type: "image/jpeg" },
   { id: "kbtech", label: "KB Tech", url: "/samples/kbtech.jpg", type: "image/jpeg" },
+  { id: "arctic", label: "Arctic Solutions", url: "/samples/arctic.jpg", type: "image/jpeg" },
 ];
 
 export async function makeSample(id: SampleId): Promise<File> {
