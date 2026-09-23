@@ -1,19 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { assembleGainMapJpeg } from "./tool/container";
-import { encodeGrayJpeg, encodeRgbJpeg } from "./tool/jpeg";
-
-const SIZE = 64;
-const MIN_BOOST = 1.5;
-const MAX_BOOST = 7.5; // the same peak as the built-in swatch
-
-/** A flat white square with a uniform gain map, the same shape as the built-in swatch. */
-function buildSwatch(boost: number): Uint8Array {
-  const white = new Uint8Array(SIZE * SIZE * 3).fill(255);
-  const base = encodeRgbJpeg(white, SIZE, SIZE, 100);
-  const full = new Uint8Array(SIZE * SIZE).fill(255);
-  const gainMap = encodeGrayJpeg(full, SIZE, SIZE, 95);
-  return assembleGainMapJpeg({ base, gainMap, maxBoost: boost });
-}
+import { buildSwatch, MAX_SWATCH_BOOST, MIN_SWATCH_BOOST } from "./tool/swatch";
 
 /**
  * Lets a visitor pick their own intensity for the background-clip: text swatch,
@@ -21,7 +7,7 @@ function buildSwatch(boost: number): Uint8Array {
  * rebuild it on every slider move, no debounce or worker needed.
  */
 export function SwatchGenerator() {
-  const [boost, setBoost] = useState(MAX_BOOST);
+  const [boost, setBoost] = useState(MAX_SWATCH_BOOST);
   const urlRef = useRef<string | null>(null);
   const [file, setFile] = useState<{ url: string; size: number } | null>(null);
 
@@ -50,8 +36,8 @@ export function SwatchGenerator() {
         </span>
         <input
           type="range"
-          min={MIN_BOOST}
-          max={MAX_BOOST}
+          min={MIN_SWATCH_BOOST}
+          max={MAX_SWATCH_BOOST}
           step="0.1"
           value={boost}
           onChange={(event) => setBoost(Number(event.target.value))}
