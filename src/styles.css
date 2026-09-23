@@ -669,8 +669,9 @@ a {
 }
 
 .footer__mark {
+  display: inline-block;
   font-weight: 700;
-  font-size: 0.9375rem;
+  font-size: 1.25rem;
 }
 
 .info ol {
