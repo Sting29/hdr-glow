@@ -1,0 +1,13 @@
+{
+  "name": "hdr-glow",
+  "short_name": "hdr-glow",
+  "description": "Make colors brighter than white on HDR screens, entirely in the browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060919",
+  "theme_color": "#060919",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

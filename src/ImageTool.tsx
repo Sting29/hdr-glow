@@ -18,6 +18,11 @@ import { ImageWorker } from "./tool/imageWorker";
 import type { MaskParams, RGB } from "./tool/mask";
 import { MAX_SIDE } from "./tool/protocol";
 
+const MAX_FILE_BYTES = 30 * 1024 * 1024; // 30 MB
+const MAX_SVG_BYTES = 5 * 1024 * 1024; // SVG is text; this big usually means embedded images
+const MAX_MEGAPIXELS = 100; // guards the browser's own decode, before our MAX_SIDE downscale ever runs
+const MIN_TOLERANCE = 0.02;
+const MAX_TOLERANCE = 0.5;
 const DEFAULT_TOLERANCE = 0.12;
 const DEFAULT_SOFTNESS = 0.5;
 const MAX_BOOST = 7.5; // the same peak as the swatch, +2.9 stops
@@ -198,8 +203,18 @@ export function ImageTool({ support }: Props) {
     if (!worker) return;
     setError("");
     const svg = isSvg(file);
+    const sizeLimit = svg ? MAX_SVG_BYTES : MAX_FILE_BYTES;
+    if (file.size > sizeLimit) {
+      setError(`This file is ${formatSize(file.size)}. Use one under ${formatSize(sizeLimit)}.`);
+      return;
+    }
     try {
       const decoded = svg ? await rasterizeSvg(file) : await createImageBitmap(file);
+      if (decoded.width * decoded.height > MAX_MEGAPIXELS * 1_000_000) {
+        decoded.close();
+        setError(`This image is ${decoded.width}×${decoded.height}, too large to process. Use one under ${MAX_MEGAPIXELS} megapixels.`);
+        return;
+      }
       const info = await worker.load(decoded, background);
       appliedBackground.current = background;
       setBitmap((previous) => {
@@ -414,11 +429,11 @@ export function ImageTool({ support }: Props) {
             </div>
 
             <label className="field">
-              <span>Color range: {tolerance.toFixed(2)}</span>
+              <span>Color range: {Math.round(((tolerance - MIN_TOLERANCE) / (MAX_TOLERANCE - MIN_TOLERANCE)) * 100)}%</span>
               <input
                 type="range"
-                min="0.02"
-                max="0.5"
+                min={MIN_TOLERANCE}
+                max={MAX_TOLERANCE}
                 step="0.01"
                 value={tolerance}
                 onChange={(event) => setTolerance(Number(event.target.value))}
