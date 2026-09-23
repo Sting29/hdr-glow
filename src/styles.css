@@ -145,9 +145,14 @@ a {
   display: grid;
   gap: 0.75rem;
   max-width: 26rem;
-  margin-top: 1.25rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
+  margin-top: -0.75rem;
+  padding-bottom: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.swatch-gen__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--mist);
 }
 
 /* ---------- example row ---------- */

@@ -26,13 +26,18 @@ export function SwatchGenerator() {
     [],
   );
 
-  const fileName = `swatch-${boost.toFixed(1)}x.jpg`;
+  const fileName = `hdr-glow-swatch-${boost.toFixed(1)}x.jpg`;
 
   return (
     <div className="swatch-gen">
+      <p className="swatch-gen__hint">
+        This tiny image is what the CSS above cuts the letters out of. Lower the strength for a
+        subtler glow.
+      </p>
       <label className="field">
         <span>
-          Or make your own: {boost.toFixed(1)}× brighter (+{Math.log2(boost).toFixed(1)} stops)
+          Glow strength: {boost.toFixed(1)}× brighter than white (+{Math.log2(boost).toFixed(1)}{" "}
+          stops)
         </span>
         <input
           type="range"
@@ -45,7 +50,7 @@ export function SwatchGenerator() {
       </label>
       {file ? (
         <a className="button" href={file.url} download={fileName}>
-          Download {fileName} ({Math.round(file.size / 1024)} KB)
+          Download glow image ({Math.round(file.size / 1024)} KB)
         </a>
       ) : null}
     </div>
