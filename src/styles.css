@@ -668,6 +668,11 @@ a {
   color: var(--paper);
 }
 
+.footer__mark {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
 .info ol {
   display: grid;
   gap: 0.6rem;

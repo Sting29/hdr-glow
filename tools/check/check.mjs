@@ -227,8 +227,36 @@ test("suggest: a white shape on a transparent background is still white", () => 
   assert.deepEqual(suggestColors(lab, rgba, alpha), [WHITE]);
 });
 
-test("suggest: white is preferred even when a green covers more of the image", () => {
+test("suggest: white comes first even when a green covers more of the image, but both are offered", () => {
   const list = Array.from({ length: 1000 }, (_, i) => (i < 100 ? [255, 255, 255] : i < 400 ? [0, 200, 60] : [0, 0, 0]));
+  const { lab, rgba, alpha } = pixelsOf(list);
+  assert.deepEqual(suggestColors(lab, rgba, alpha), [WHITE, GREEN]);
+});
+
+test("suggest: a metallic gradient (white fading to gray) offers several shades, not just white", () => {
+  // A silver logo like the sample lighthouse: a spread of grays from white down to mid-gray,
+  // one band per suggestion slot so full coverage is actually reachable.
+  const shades = [255, 230, 205, 185, 165].flatMap((v) => Array.from({ length: 40 }, () => [v, v, v]));
+  const background = Array.from({ length: 4000 }, () => [20, 20, 30]);
+  const { lab, rgba, alpha } = pixelsOf([...shades, ...background]);
+  const found = suggestColors(lab, rgba, alpha);
+  assert.ok(found.length > 1, `expected several shades, got ${JSON.stringify(found)}`);
+  assert.deepEqual(found[0], WHITE, "white still comes first");
+  assert.ok(found.length <= 5, "capped at a handful of suggestions");
+  // covering the gradient means computeMask lights up all seven shades at once
+  const mask = new Uint8Array(shades.length);
+  computeMask(toOklab(pixelsOf(shades).rgba), pixelsOf(shades).alpha, { colors: found, tolerance: 0.12, softness: 0.5 }, mask);
+  const litFraction = mask.reduce((sum, v) => sum + (v > 0 ? 1 : 0), 0) / mask.length;
+  assert.ok(litFraction > 0.9, `expected almost the whole gradient to glow, only ${litFraction * 100}% did`);
+});
+
+test("suggest: near-duplicate shades collapse into one suggestion", () => {
+  // Two clusters that are practically the same white, just off by JPEG noise, on a dark logo.
+  const list = Array.from({ length: 1000 }, (_, i) => {
+    if (i < 50) return [255, 255, 255];
+    if (i < 100) return [253, 254, 252];
+    return [10, 10, 30];
+  });
   const { lab, rgba, alpha } = pixelsOf(list);
   assert.deepEqual(suggestColors(lab, rgba, alpha), [WHITE]);
 });

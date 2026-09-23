@@ -93,11 +93,19 @@ const LIGHT = 0.7; // OKLab lightness above which a color is a candidate
 const MIN_SHARE = 0.002; // ignore colors that cover less of the image
 const MAX_SHARE = 0.6; // a color that fills most of the image is the background (transparent areas count)
 const WHITE_DISTANCE = 0.05;
+const MAX_SUGGESTIONS = 5;
+// Two candidates this close in OKLab are the same shade of one gradient, not
+// two different colors, so only the more common one is kept.
+const MERGE_DISTANCE = 0.08;
+
+const WHITE: RGB = { r: 255, g: 255, b: 255 };
 
 /**
- * The color most likely meant to glow. White wins whenever the image has some
- * that is not the background. Otherwise the most common light color that is not
- * the background, snapped to pure white when it is close enough.
+ * The colors most likely meant to glow, most common first. White always wins
+ * the first slot when the image has some that is not the background: on a
+ * shaded or metallic logo the rest of the slots then pick up the other tones
+ * of that same white, so a gradient glows fully without extra clicks. A color
+ * close enough to white snaps to it exactly.
  */
 export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha: Uint8Array): RGB[] {
   const pixels = alpha.length;
@@ -116,24 +124,47 @@ export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha:
     sums[key * 3 + 2] += b;
   }
 
-  const whiteShare = counts[0xfff] / pixels;
-  if (whiteShare >= MIN_SHARE && whiteShare <= MAX_SHARE) return [{ r: 255, g: 255, b: 255 }];
+  const colorOf = (key: number): RGB => ({
+    r: Math.round(sums[key * 3] / counts[key]),
+    g: Math.round(sums[key * 3 + 1] / counts[key]),
+    b: Math.round(sums[key * 3 + 2] / counts[key]),
+  });
+  const snapToWhite = (color: RGB): RGB => {
+    const [L, a, b] = labOfColors([color]);
+    const [wL, wa, wb] = labOfColors([WHITE]);
+    return Math.hypot(L - wL, a - wa, b - wb) <= WHITE_DISTANCE ? WHITE : color;
+  };
 
-  let best = -1;
+  // Every bucket whose share of the image is neither too rare nor the
+  // background, largest first: the most common tones of the gradient.
+  const candidates: number[] = [];
   for (let key = 0; key < 4096; key++) {
     const share = counts[key] / pixels;
-    if (share < MIN_SHARE || share > MAX_SHARE) continue;
-    if (best < 0 || counts[key] > counts[best]) best = key;
+    if (share >= MIN_SHARE && share <= MAX_SHARE) candidates.push(key);
   }
-  if (best < 0) return [];
+  candidates.sort((a, b) => counts[b] - counts[a]);
 
-  const color: RGB = {
-    r: Math.round(sums[best * 3] / counts[best]),
-    g: Math.round(sums[best * 3 + 1] / counts[best]),
-    b: Math.round(sums[best * 3 + 2] / counts[best]),
+  const chosen: RGB[] = [];
+  const chosenLab: number[] = []; // flat L, a, b per chosen color
+
+  const add = (color: RGB): boolean => {
+    const [L, a, b] = labOfColors([color]);
+    for (let i = 0; i < chosenLab.length; i += 3) {
+      if (Math.hypot(L - chosenLab[i], a - chosenLab[i + 1], b - chosenLab[i + 2]) < MERGE_DISTANCE) {
+        return false;
+      }
+    }
+    chosen.push(color);
+    chosenLab.push(L, a, b);
+    return true;
   };
-  const found = labOfColors([color]);
-  const white = labOfColors([{ r: 255, g: 255, b: 255 }]);
-  const distance = Math.hypot(found[0] - white[0], found[1] - white[1], found[2] - white[2]);
-  return [distance <= WHITE_DISTANCE ? { r: 255, g: 255, b: 255 } : color];
+
+  const whiteShare = counts[0xfff] / pixels;
+  if (whiteShare >= MIN_SHARE && whiteShare <= MAX_SHARE) add(WHITE);
+
+  for (const key of candidates) {
+    if (chosen.length >= MAX_SUGGESTIONS) break;
+    add(snapToWhite(colorOf(key)));
+  }
+  return chosen;
 }
