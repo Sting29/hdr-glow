@@ -89,39 +89,77 @@ export function computeMask(
   }
 }
 
-const LIGHT = 0.7; // OKLab lightness above which a color is a candidate
-const MIN_SHARE = 0.002; // ignore colors that cover less of the image
-const MAX_SHARE = 0.6; // a color that fills most of the image is the background (transparent areas count)
+// Two floors: plain white/gray only counts as a candidate when it is
+// genuinely bright (antialiasing and background noise stay out), but a
+// saturated color (a leaf, a logo's brand color) reads as "meant to glow"
+// at a noticeably lower raw lightness, so it gets its own, lower floor.
+const NEUTRAL_LIGHT = 0.7;
+const CHROMA_LIGHT = 0.5;
+// Below this OKLab chroma a pixel has no real hue of its own: it is grouped
+// with the neutral (white/gray) family instead of a color family.
+const CHROMA_MIN = 0.04;
+const HUE_BINS = 12; // 30° each
+// The neutral family plus at most this many distinct hues, e.g. a logo with
+// a white part and two brand colors (a red and a blue wordmark, say).
+const MAX_FAMILIES = 3;
+// Shades picked from inside one family: enough to cover a metallic gradient
+// end to end without reaching so far that a busy dark background's own JPEG
+// noise starts looking like one more shade of the same family.
+const SHADES_PER_FAMILY = 3;
+const MAX_SUGGESTIONS = 6;
+const MIN_SHARE = 0.002; // ignore a shade, or a whole family, this rare
+const MAX_SHARE = 0.6; // this common is the background (transparent areas count)
 const WHITE_DISTANCE = 0.05;
-const MAX_SUGGESTIONS = 5;
-// Two candidates this close in OKLab are the same shade of one gradient, not
-// two different colors, so only the more common one is kept.
+// Two candidates this close in OKLab are the same shade, not two different
+// colors, so only the more common one is kept.
 const MERGE_DISTANCE = 0.08;
 
 const WHITE: RGB = { r: 255, g: 255, b: 255 };
+const NEUTRAL_FAMILY = HUE_BINS; // one slot past the last hue bin
 
 /**
- * The colors most likely meant to glow, most common first. White always wins
- * the first slot when the image has some that is not the background: on a
- * shaded or metallic logo the rest of the slots then pick up the other tones
- * of that same white, so a gradient glows fully without extra clicks. A color
- * close enough to white snaps to it exactly.
+ * The colors most likely meant to glow, most common first. Pixels are first
+ * split into color families: white/gray, and up to a dozen hue directions
+ * (a red, a green, a blue, ...). White wins the first slot whenever the image
+ * has some that is not the background; the rest of the families are then
+ * ranked by how much of the image they cover, largest first, and each
+ * contributes a few of its own most common shades. That way a shaded or
+ * metallic logo glows across its whole gradient without extra clicks, and a
+ * logo with a couple of honestly different brand colors gets one of each
+ * instead of only the single most common tone.
  */
 export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha: Uint8Array): RGB[] {
   const pixels = alpha.length;
   const counts = new Uint32Array(4096);
   const sums = new Float64Array(4096 * 3);
+  // Which family each bucket belongs to; -1 means the bucket never appears.
+  const bucketFamily = new Int8Array(4096).fill(-1);
+  const familyShare = new Float64Array(HUE_BINS + 1);
 
   for (let i = 0; i < pixels; i++) {
-    if (alpha[i] < 128 || lab[i * 3] < LIGHT) continue;
+    if (alpha[i] < 128) continue;
+    const L = lab[i * 3];
+    const a = lab[i * 3 + 1];
+    const b = lab[i * 3 + 2];
+    const chroma = Math.hypot(a, b);
+    let family: number;
+    if (chroma < CHROMA_MIN) {
+      if (L < NEUTRAL_LIGHT) continue;
+      family = NEUTRAL_FAMILY;
+    } else {
+      if (L < CHROMA_LIGHT) continue;
+      family = Math.floor(((Math.atan2(b, a) + Math.PI) / (2 * Math.PI)) * HUE_BINS) % HUE_BINS;
+    }
     const r = rgba[i * 4];
     const g = rgba[i * 4 + 1];
-    const b = rgba[i * 4 + 2];
-    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const bl = rgba[i * 4 + 2];
+    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (bl >> 4);
     counts[key]++;
     sums[key * 3] += r;
     sums[key * 3 + 1] += g;
-    sums[key * 3 + 2] += b;
+    sums[key * 3 + 2] += bl;
+    bucketFamily[key] = family;
+    familyShare[family] += 1;
   }
 
   const colorOf = (key: number): RGB => ({
@@ -134,15 +172,6 @@ export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha:
     const [wL, wa, wb] = labOfColors([WHITE]);
     return Math.hypot(L - wL, a - wa, b - wb) <= WHITE_DISTANCE ? WHITE : color;
   };
-
-  // Every bucket whose share of the image is neither too rare nor the
-  // background, largest first: the most common tones of the gradient.
-  const candidates: number[] = [];
-  for (let key = 0; key < 4096; key++) {
-    const share = counts[key] / pixels;
-    if (share >= MIN_SHARE && share <= MAX_SHARE) candidates.push(key);
-  }
-  candidates.sort((a, b) => counts[b] - counts[a]);
 
   const chosen: RGB[] = [];
   const chosenLab: number[] = []; // flat L, a, b per chosen color
@@ -159,12 +188,39 @@ export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha:
     return true;
   };
 
-  const whiteShare = counts[0xfff] / pixels;
-  if (whiteShare >= MIN_SHARE && whiteShare <= MAX_SHARE) add(WHITE);
+  // Rank the families that are neither too rare nor the background, white
+  // first whenever it qualifies, the rest by how much of the image they cover.
+  const families: number[] = [];
+  for (let family = 0; family <= HUE_BINS; family++) {
+    const share = familyShare[family] / pixels;
+    if (share >= MIN_SHARE && share <= MAX_SHARE) families.push(family);
+  }
+  const whiteQualifies = counts[0xfff] > 0 && bucketFamily[0xfff] === NEUTRAL_FAMILY && families.includes(NEUTRAL_FAMILY);
+  families.sort((x, y) => {
+    if (whiteQualifies) {
+      if (x === NEUTRAL_FAMILY) return -1;
+      if (y === NEUTRAL_FAMILY) return 1;
+    }
+    return familyShare[y] - familyShare[x];
+  });
 
-  for (const key of candidates) {
+  for (const family of families.slice(0, MAX_FAMILIES)) {
+    // That family's own buckets, most common shade first.
+    const shades: number[] = [];
+    for (let key = 0; key < 4096; key++) {
+      if (bucketFamily[key] !== family) continue;
+      const share = counts[key] / pixels;
+      if (share >= MIN_SHARE && share <= MAX_SHARE) shades.push(key);
+    }
+    shades.sort((x, y) => counts[y] - counts[x]);
+
+    if (family === NEUTRAL_FAMILY && whiteQualifies) add(WHITE);
+    let added = family === NEUTRAL_FAMILY && whiteQualifies ? 1 : 0;
+    for (const key of shades) {
+      if (added >= SHADES_PER_FAMILY || chosen.length >= MAX_SUGGESTIONS) break;
+      if (add(snapToWhite(colorOf(key)))) added++;
+    }
     if (chosen.length >= MAX_SUGGESTIONS) break;
-    add(snapToWhite(colorOf(key)));
   }
   return chosen;
 }
