@@ -1,40 +1,28 @@
-// Minimal offline cache: everything the tool needs is static and already in
-// your browser once you've loaded the page once, so this just remembers what
-// was fetched and serves that back when there's no network. No build-time
-// list of files to keep in sync, hand-written on purpose like the rest of
-// this project's tooling.
+// No caching on purpose: this project changes often, and a cached copy of the
+// page or its JS is exactly what once made this page's own glow look broken
+// until the cache was cleared, even though the real code was fine.
+//
+// Chrome still wants a registered service worker with a fetch handler before
+// it will offer to install the site as an app, so this exists to satisfy
+// that, and nothing else: every request just goes straight to the network,
+// as if there were no service worker at all.
 
-const CACHE = "hdr-glow-v1";
-
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  // Anyone who already has the earlier, caching version of this file gets its
+  // stored responses cleared out here, so a stale copy of the page can't keep
+  // being served after this update reaches them.
   event.waitUntil(
     caches
       .keys()
-      .then((names) => Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name))))
+      .then((names) => Promise.all(names.map((name) => caches.delete(name))))
       .then(() => self.clients.claim()),
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
-
-  event.respondWith(
-    caches.open(CACHE).then(async (cache) => {
-      const cached = await cache.match(request);
-      const network = fetch(request)
-        .then((response) => {
-          if (response.ok) cache.put(request, response.clone());
-          return response;
-        })
-        .catch(() => cached);
-      // Serve a cached page instantly if there is one, but still refresh it
-      // in the background so the cache doesn't go stale forever.
-      return cached || network;
-    }),
-  );
+  event.respondWith(fetch(event.request));
 });
