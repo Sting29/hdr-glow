@@ -125,7 +125,10 @@ type CardProps = {
 
 function ResultCard({ title, lede, file, busy, downloadName, buttonLabel, emptyText, note }: CardProps) {
   return (
-    <section className="result" aria-live="polite">
+    <section className="result">
+      <p className="sr-only" role="status">
+        {file ? `${title} ready, ${formatSize(file.size)}` : busy ? "Building…" : ""}
+      </p>
       <h3 className="result__title">{title}</h3>
       <p className="tool__note">{lede}</p>
       {file ? (
@@ -530,7 +533,7 @@ export function ImageTool({ support }: Props) {
 
             <label className="field">
               <span>
-                Intensity: {boost.toFixed(1)}× brighter (+{Math.log2(boost).toFixed(1)} stops)
+                Glow strength: {boost.toFixed(1)}× brighter (+{Math.log2(boost).toFixed(1)} stops)
               </span>
               <input
                 type="range"
