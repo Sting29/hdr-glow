@@ -36,7 +36,7 @@ export function Explainer() {
           <li>
             You need three things at once: an HDR screen, HDR turned on, and an app that reads gain
             maps or PQ. Tested: Chrome 137+, Safari 26 / iOS 26, Apple Photos, the LinkedIn app. On
-            Android the glow is still unconfirmed.
+            Android it glows on a Samsung Galaxy S23; an older Xiaomi phone showed no glow.
           </li>
           <li>
             Everywhere else the HDR JPEG is an ordinary picture. A PQ file can look dark and flat
