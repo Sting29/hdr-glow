@@ -20,6 +20,8 @@
 
 html {
   background: var(--night);
+  scroll-behavior: smooth;
+  scroll-padding-top: 3.5rem; /* keeps a section's own heading clear of the sticky nav */
 }
 
 body {
@@ -93,6 +95,59 @@ a {
 
 .status[data-hdr="true"] {
   color: var(--paper);
+}
+
+/* ---------- nav ---------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin: 0 0 clamp(2rem, 5vw, 3.5rem);
+  padding: 0.75rem 0;
+  background: var(--night);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.875rem;
+}
+
+.nav a {
+  color: var(--mist);
+  text-decoration: none;
+}
+
+.nav a:hover {
+  color: var(--paper);
+}
+
+/* ---------- features (short "what it does") ---------- */
+
+.features {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 44rem;
+  margin: -1rem 0 clamp(2rem, 5vw, 3.5rem);
+  padding: 0;
+  list-style: none;
+  color: var(--mist);
+}
+
+.features li::before {
+  content: "→ ";
+  color: var(--focus);
+}
+
+/* ---------- swatch generator ---------- */
+
+.swatch-gen {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 26rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- example row ---------- */
@@ -371,6 +426,12 @@ a {
   gap: 1rem;
 }
 
+.field__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--mist);
+}
+
 .field--inline input[type="color"] {
   width: 3rem;
   height: 2.25rem;
@@ -414,6 +475,64 @@ a {
   height: 1rem;
   border: 1px solid var(--mist);
   border-radius: 50%;
+}
+
+.hex-add__hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--mist);
+}
+
+.hex-add {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.hex-add__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.25rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--paper);
+  font: inherit;
+  font-family: var(--mono);
+}
+
+.hex-add__input[aria-invalid="true"] {
+  border-color: #ffb4a8;
+}
+
+.hex-add__button {
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  cursor: pointer;
+}
+
+.hex-add__button:hover {
+  border-color: var(--mist);
+}
+
+.hex-add__error {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: #ffb4a8;
+}
+
+.hex-add__suggested {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--mist);
 }
 
 .tool__results {

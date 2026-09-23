@@ -1,6 +1,9 @@
 import { Explainer } from "./Explainer";
+import { Features } from "./Features";
 import { Footer } from "./Footer";
 import { ImageTool } from "./ImageTool";
+import { Nav } from "./Nav";
+import { SwatchGenerator } from "./SwatchGenerator";
 import { TextExample } from "./TextExample";
 import { describeSupport, useHdrSupport } from "./useHdrDisplay";
 import {
@@ -31,9 +34,13 @@ export function App() {
           </p>
         </header>
 
+        <Nav />
+
+        <Features />
+
         <ImageTool support={support} />
 
-        <section className="text" aria-labelledby="text-title">
+        <section id="text" className="text" aria-labelledby="text-title">
           <h2 id="text-title" className={`section-title ${HDR_CLASS}`}>
             Text
           </h2>
@@ -69,6 +76,8 @@ export function App() {
             css={PLAIN_CSS}
             defaultText="Glow on HDR screens"
           />
+
+          <SwatchGenerator />
         </section>
 
         <Explainer />
