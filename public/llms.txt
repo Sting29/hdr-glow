@@ -1,0 +1,13 @@
+# hdr-glow
+
+Make colors brighter than white on HDR screens, entirely in the browser.
+Upload a logo, pick the colors that should glow, and download an HDR JPEG
+(gain map) for the web and Apple Photos, or a Rec.2100 PQ JPEG for LinkedIn.
+The JPEG encoder, the gain-map container, and the ICC profile are all
+written from scratch in TypeScript; nothing is uploaded, everything runs in
+this page. A text demo shows the same trick with `background-clip: text`.
+
+## Links
+
+- [Source code](https://github.com/Sting29/hdr-glow)
+- [Author on LinkedIn](https://www.linkedin.com/in/konstantin-beregovoy/)
