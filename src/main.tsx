@@ -10,3 +10,11 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 );
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Offline support is a nice-to-have; the site works fine without it.
+    });
+  });
+}
