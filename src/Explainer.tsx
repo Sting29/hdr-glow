@@ -3,31 +3,7 @@ import { HDR_CLASS } from "./snippets";
 export function Explainer() {
   return (
     <>
-      <section className="info" aria-labelledby="features-title">
-        <h2 id="features-title" className={`section-title ${HDR_CLASS}`}>
-          What it does
-        </h2>
-        <ul>
-          <li>Runs entirely in this browser tab: no server, no account, no upload.</li>
-          <li>Reads PNG, JPEG, WebP, AVIF and SVG. SVGs are drawn sharp at 2048 px.</li>
-          <li>
-            Suggests the colors to light up, whites first, and lets you click any other color,
-            including brand colors like green or blue.
-          </li>
-          <li>
-            Makes two files from one image: a gain-map JPEG (ISO 21496-1 and Adobe XMP) for the web
-            and Apple Photos, and a Rec.2100 PQ JPEG for LinkedIn.
-          </li>
-          <li>
-            Written from scratch in TypeScript: its own JPEG encoder, gain-map container and ICC
-            profile, assembled byte by byte. The heavy work runs in a Web Worker.
-          </li>
-          <li>Shows the real glow where the screen can, and a simulated one everywhere else.</li>
-          <li>Makes text on your own site glow with a few lines of CSS.</li>
-        </ul>
-      </section>
-
-      <section className="info" aria-labelledby="how-title">
+      <section id="how-it-works" className="info" aria-labelledby="how-title">
         <h2 id="how-title" className={`section-title ${HDR_CLASS}`}>
           How it works
         </h2>

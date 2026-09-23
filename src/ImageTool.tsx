@@ -39,6 +39,19 @@ const hex = ({ r, g, b }: RGB) =>
 
 const sameColor = (a: RGB, b: RGB) => a.r === b.r && a.g === b.g && a.b === b.b;
 
+/** Accepts "#fff", "fff", "#ffffff" or "ffffff"; null if it isn't a valid color. */
+const parseHex = (value: string): RGB | null => {
+  const trimmed = value.trim().replace(/^#/, "");
+  const expanded =
+    trimmed.length === 3 ? trimmed.replace(/./g, (char) => char + char) : trimmed;
+  if (!/^[0-9a-f]{6}$/i.test(expanded)) return null;
+  return {
+    r: parseInt(expanded.slice(0, 2), 16),
+    g: parseInt(expanded.slice(2, 4), 16),
+    b: parseInt(expanded.slice(4, 6), 16),
+  };
+};
+
 const formatSize = (bytes: number) =>
   bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
@@ -162,6 +175,9 @@ export function ImageTool({ support }: Props) {
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
   const [fileName, setFileName] = useState("logo");
   const [colors, setColors] = useState<RGB[]>([]);
+  const [suggestedColors, setSuggestedColors] = useState<RGB[]>([]);
+  const [hexInput, setHexInput] = useState("");
+  const [hexInputInvalid, setHexInputInvalid] = useState(false);
   const [tolerance, setTolerance] = useState(DEFAULT_TOLERANCE);
   const [softness, setSoftness] = useState(DEFAULT_SOFTNESS);
   const [boost, setBoost] = useState(MAX_BOOST);
@@ -225,6 +241,7 @@ export function ImageTool({ support }: Props) {
       setFileName(file.name.replace(/\.[^.]+$/, "") || "logo");
       setFromSvg(svg);
       setColors(info.suggested);
+      setSuggestedColors(info.suggested);
       setCoverage(null);
       hdrFile.clear();
       pqFile.clear();
@@ -312,6 +329,10 @@ export function ImageTool({ support }: Props) {
     }
   };
 
+  const addColor = (color: RGB) => {
+    setColors((list) => (list.some((c) => sameColor(c, color)) ? list : [...list, color]));
+  };
+
   const onPick = async (event: MouseEvent<HTMLCanvasElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     try {
@@ -319,14 +340,25 @@ export function ImageTool({ support }: Props) {
         (event.clientX - rect.left) / rect.width,
         (event.clientY - rect.top) / rect.height,
       );
-      if (color) setColors((list) => (list.some((c) => sameColor(c, color)) ? list : [...list, color]));
+      if (color) addColor(color);
     } catch {
       setError("Could not read the color there.");
     }
   };
 
+  const addHexColor = () => {
+    const color = parseHex(hexInput);
+    if (!color) {
+      setHexInputInvalid(true);
+      return;
+    }
+    addColor(color);
+    setHexInput("");
+    setHexInputInvalid(false);
+  };
+
   return (
-    <section className="tool" aria-labelledby={`${ids}-title`}>
+    <section id="image" className="tool" aria-labelledby={`${ids}-title`}>
       <h2 id={`${ids}-title`} className={`section-title ${HDR_CLASS}`}>
         Image
       </h2>
@@ -426,6 +458,58 @@ export function ImageTool({ support }: Props) {
                   <li className="chips__empty">None yet. Click a color in the image.</li>
                 ) : null}
               </ul>
+
+              <form
+                className="hex-add"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  addHexColor();
+                }}
+              >
+                <label className="sr-only" htmlFor={`${ids}-hex`}>
+                  Add a color by hex code
+                </label>
+                <input
+                  id={`${ids}-hex`}
+                  className="hex-add__input"
+                  type="text"
+                  inputMode="text"
+                  placeholder="#rrggbb"
+                  value={hexInput}
+                  aria-invalid={hexInputInvalid}
+                  onChange={(event) => {
+                    setHexInput(event.target.value);
+                    setHexInputInvalid(false);
+                  }}
+                />
+                <button type="submit" className="hex-add__button">
+                  Add color
+                </button>
+              </form>
+              {hexInputInvalid ? (
+                <p className="hex-add__error" role="alert">
+                  Not a color. Use a hex code like #fff or #a86bff.
+                </p>
+              ) : null}
+
+              {suggestedColors.some((s) => !colors.some((c) => sameColor(c, s))) ? (
+                <div className="hex-add__suggested">
+                  <span>Found in the image:</span>
+                  <ul className="chips">
+                    {suggestedColors
+                      .filter((s) => !colors.some((c) => sameColor(c, s)))
+                      .map((color) => (
+                        <li key={hex(color)}>
+                          <button type="button" className="chip" onClick={() => addColor(color)}>
+                            <span className="chip__swatch" style={{ background: hex(color) }} />
+                            <code>{hex(color)}</code>
+                            <span aria-hidden="true">+</span>
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
 
             <label className="field">
