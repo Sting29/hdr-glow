@@ -20,8 +20,13 @@
 
 html {
   background: var(--night);
-  scroll-behavior: smooth;
   scroll-padding-top: 3.5rem; /* keeps a section's own heading clear of the sticky nav */
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
@@ -107,13 +112,14 @@ a {
   flex-wrap: wrap;
   gap: 1.25rem;
   margin: 0 0 clamp(2rem, 5vw, 3.5rem);
-  padding: 0.75rem 0;
+  padding: 0.25rem 0;
   background: var(--night);
   border-bottom: 1px solid var(--line);
   font-size: 0.875rem;
 }
 
 .nav a {
+  padding: 0.5rem 0;
   color: var(--mist);
   text-decoration: none;
 }
@@ -145,9 +151,14 @@ a {
   display: grid;
   gap: 0.75rem;
   max-width: 26rem;
-  margin-top: 1.25rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
+  margin-top: -0.75rem;
+  padding-bottom: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.swatch-gen__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--mist);
 }
 
 /* ---------- example row ---------- */
@@ -166,7 +177,7 @@ a {
   }
 }
 
-.example__head h2 {
+.example__head h3 {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 700;

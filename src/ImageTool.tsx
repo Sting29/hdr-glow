@@ -14,6 +14,7 @@ import { isSvg, rasterizeSvg } from "./rasterize";
 import { makeSample, SAMPLES, type SampleId } from "./samples";
 import { HDR_CLASS } from "./snippets";
 import { describeSupport, type HdrSupport } from "./useHdrDisplay";
+import { addGlowColor, MAX_GLOW_COLORS, parseHex, sameColor } from "./tool/colors";
 import { ImageWorker } from "./tool/imageWorker";
 import type { MaskParams, RGB } from "./tool/mask";
 import { MAX_SIDE } from "./tool/protocol";
@@ -36,21 +37,6 @@ type Mode = "live" | "simulated";
 
 const hex = ({ r, g, b }: RGB) =>
   `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-
-const sameColor = (a: RGB, b: RGB) => a.r === b.r && a.g === b.g && a.b === b.b;
-
-/** Accepts "#fff", "fff", "#ffffff" or "ffffff"; null if it isn't a valid color. */
-const parseHex = (value: string): RGB | null => {
-  const trimmed = value.trim().replace(/^#/, "");
-  const expanded =
-    trimmed.length === 3 ? trimmed.replace(/./g, (char) => char + char) : trimmed;
-  if (!/^[0-9a-f]{6}$/i.test(expanded)) return null;
-  return {
-    r: parseInt(expanded.slice(0, 2), 16),
-    g: parseInt(expanded.slice(2, 4), 16),
-    b: parseInt(expanded.slice(4, 6), 16),
-  };
-};
 
 const formatSize = (bytes: number) =>
   bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -139,7 +125,10 @@ type CardProps = {
 
 function ResultCard({ title, lede, file, busy, downloadName, buttonLabel, emptyText, note }: CardProps) {
   return (
-    <section className="result" aria-live="polite">
+    <section className="result">
+      <p className="sr-only" role="status">
+        {file ? `${title} ready, ${formatSize(file.size)}` : busy ? "Building…" : ""}
+      </p>
       <h3 className="result__title">{title}</h3>
       <p className="tool__note">{lede}</p>
       {file ? (
@@ -177,7 +166,7 @@ export function ImageTool({ support }: Props) {
   const [colors, setColors] = useState<RGB[]>([]);
   const [suggestedColors, setSuggestedColors] = useState<RGB[]>([]);
   const [hexInput, setHexInput] = useState("");
-  const [hexInputInvalid, setHexInputInvalid] = useState(false);
+  const [hexError, setHexError] = useState<string | null>(null);
   const [tolerance, setTolerance] = useState(DEFAULT_TOLERANCE);
   const [softness, setSoftness] = useState(DEFAULT_SOFTNESS);
   const [boost, setBoost] = useState(MAX_BOOST);
@@ -330,7 +319,7 @@ export function ImageTool({ support }: Props) {
   };
 
   const addColor = (color: RGB) => {
-    setColors((list) => (list.some((c) => sameColor(c, color)) ? list : [...list, color]));
+    setColors((list) => addGlowColor(list, color));
   };
 
   const onPick = async (event: MouseEvent<HTMLCanvasElement>) => {
@@ -349,12 +338,16 @@ export function ImageTool({ support }: Props) {
   const addHexColor = () => {
     const color = parseHex(hexInput);
     if (!color) {
-      setHexInputInvalid(true);
+      setHexError("Not a color. Use a hex code like #fff or #a86bff.");
+      return;
+    }
+    if (colors.length >= MAX_GLOW_COLORS && !colors.some((c) => sameColor(c, color))) {
+      setHexError(`Up to ${MAX_GLOW_COLORS} colors. Remove one first.`);
       return;
     }
     addColor(color);
     setHexInput("");
-    setHexInputInvalid(false);
+    setHexError(null);
   };
 
   return (
@@ -478,19 +471,19 @@ export function ImageTool({ support }: Props) {
                   inputMode="text"
                   placeholder="#rrggbb"
                   value={hexInput}
-                  aria-invalid={hexInputInvalid}
+                  aria-invalid={hexError !== null}
                   onChange={(event) => {
                     setHexInput(event.target.value);
-                    setHexInputInvalid(false);
+                    setHexError(null);
                   }}
                 />
                 <button type="submit" className="hex-add__button">
                   Add color
                 </button>
               </form>
-              {hexInputInvalid ? (
+              {hexError ? (
                 <p className="hex-add__error" role="alert">
-                  Not a color. Use a hex code like #fff or #a86bff.
+                  {hexError}
                 </p>
               ) : null}
 
@@ -540,7 +533,7 @@ export function ImageTool({ support }: Props) {
 
             <label className="field">
               <span>
-                Intensity: {boost.toFixed(1)}× brighter (+{Math.log2(boost).toFixed(1)} stops)
+                Glow strength: {boost.toFixed(1)}× brighter (+{Math.log2(boost).toFixed(1)} stops)
               </span>
               <input
                 type="range"

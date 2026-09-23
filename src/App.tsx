@@ -68,6 +68,8 @@ export function App() {
             }
           />
 
+          <SwatchGenerator />
+
           <TextExample
             title="Plain text"
             method="color: #fff"
@@ -77,7 +79,6 @@ export function App() {
             defaultText="Glow on HDR screens"
           />
 
-          <SwatchGenerator />
         </section>
 
         <Explainer />

@@ -2,6 +2,7 @@
 // Checks the pure image modules in Node (no browser, no build step).
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { addGlowColor, MAX_GLOW_COLORS, parseHex, sameColor } from "../../src/tool/colors.ts";
 import { assembleGainMapJpeg, embedIccProfile } from "../../src/tool/container.ts";
 import { encodeGrayJpeg, encodeRgbJpeg } from "../../src/tool/jpeg.ts";
 import { computeMask, suggestColors, toOklab } from "../../src/tool/mask.ts";
@@ -259,6 +260,79 @@ test("suggest: near-duplicate shades collapse into one suggestion", () => {
   });
   const { lab, rgba, alpha } = pixelsOf(list);
   assert.deepEqual(suggestColors(lab, rgba, alpha), [WHITE]);
+});
+
+// ---- swatch: the user-adjustable background-clip: text swatch ----
+// Mirrors buildSwatch() in src/tool/swatch.ts. That file can't be imported here directly:
+// it imports container.ts/jpeg.ts by extensionless specifier for Vite, which Node's own
+// ESM loader (used to run this file) requires an extension for.
+const SWATCH_SIZE = 64;
+const buildSwatch = (boost) => {
+  const white = new Uint8Array(SWATCH_SIZE * SWATCH_SIZE * 3).fill(255);
+  const base = encodeRgbJpeg(white, SWATCH_SIZE, SWATCH_SIZE, 100);
+  const full = new Uint8Array(SWATCH_SIZE * SWATCH_SIZE).fill(255);
+  const gainMap = encodeGrayJpeg(full, SWATCH_SIZE, SWATCH_SIZE, 95);
+  return assembleGainMapJpeg({ base, gainMap, maxBoost: boost });
+};
+
+test("swatch: buildSwatch returns a JPEG that starts with SOI and ends with EOI", () => {
+  const jpeg = buildSwatch(7.5);
+  assert.deepEqual([jpeg[0], jpeg[1]], [0xff, 0xd8]);
+  assert.deepEqual([jpeg[jpeg.length - 2], jpeg[jpeg.length - 1]], [0xff, 0xd9]);
+});
+
+test("swatch: a higher boost produces different bytes than a lower boost", () => {
+  const low = buildSwatch(1.5);
+  const high = buildSwatch(7.5);
+  assert.notEqual(Buffer.from(low).toString("latin1"), Buffer.from(high).toString("latin1"));
+});
+
+// ---- colors: hex parsing and the manual glow-color list ----
+
+test("parseHex: accepts #rgb, rgb, #rrggbb and rrggbb", () => {
+  assert.deepEqual(parseHex("#fff"), { r: 255, g: 255, b: 255 });
+  assert.deepEqual(parseHex("fff"), { r: 255, g: 255, b: 255 });
+  assert.deepEqual(parseHex("#a86bff"), { r: 168, g: 107, b: 255 });
+  assert.deepEqual(parseHex("a86bff"), { r: 168, g: 107, b: 255 });
+});
+
+test("parseHex: trims whitespace and is case-insensitive", () => {
+  assert.deepEqual(parseHex("  #FFF  "), { r: 255, g: 255, b: 255 });
+  assert.deepEqual(parseHex("A86BFF"), { r: 168, g: 107, b: 255 });
+});
+
+test("parseHex: rejects anything that isn't 3 or 6 hex digits", () => {
+  assert.equal(parseHex("not-a-color"), null);
+  assert.equal(parseHex("#ffff"), null); // 4 digits, not a valid short form
+  assert.equal(parseHex("#gggggg"), null); // not hex digits
+  assert.equal(parseHex(""), null);
+});
+
+test("addGlowColor: dedupes by value", () => {
+  const list = [{ r: 255, g: 255, b: 255 }];
+  const result = addGlowColor(list, { r: 255, g: 255, b: 255 });
+  assert.equal(result, list, "should return the same reference, not a new array");
+});
+
+test("addGlowColor: adds a genuinely new color", () => {
+  const list = [{ r: 255, g: 255, b: 255 }];
+  const result = addGlowColor(list, { r: 0, g: 0, b: 0 });
+  assert.deepEqual(result, [
+    { r: 255, g: 255, b: 255 },
+    { r: 0, g: 0, b: 0 },
+  ]);
+});
+
+test("addGlowColor: stops at MAX_GLOW_COLORS", () => {
+  const list = Array.from({ length: MAX_GLOW_COLORS }, (_, i) => ({ r: i, g: 0, b: 0 }));
+  const result = addGlowColor(list, { r: 250, g: 0, b: 0 });
+  assert.equal(result, list, "a full list should not grow");
+  assert.equal(result.length, MAX_GLOW_COLORS);
+});
+
+test("sameColor: compares by value, not reference", () => {
+  assert.ok(sameColor({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 3 }));
+  assert.ok(!sameColor({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 4 }));
 });
 
 if (failed) {

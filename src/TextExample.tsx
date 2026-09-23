@@ -28,7 +28,7 @@ export function TextExample({
     <section className="example" aria-labelledby={`${inputId}-title`}>
       <div className="example__demo">
         <header className="example__head">
-          <h2 id={`${inputId}-title`}>{title}</h2>
+          <h3 id={`${inputId}-title`}>{title}</h3>
           <p>{method}</p>
         </header>
 

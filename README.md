@@ -1,5 +1,7 @@
 # hdr-glow
 
+**Live: [glow.bereg.dev](https://glow.bereg.dev)**
+
 Make colors brighter than white on HDR screens, in the browser, with no backend:
 
 - **Image tool**: upload a logo (PNG, JPEG, WebP, AVIF or SVG), pick which colors should glow,
