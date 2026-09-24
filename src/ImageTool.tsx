@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Compare } from "./Compare";
 import { drawOriginal, drawSimulated } from "./preview";
+import { logError } from "./log";
 import { isSvg, rasterizeSvg } from "./rasterize";
 import { makeSample, SAMPLES, type SampleId } from "./samples";
 import { HDR_CLASS } from "./snippets";
@@ -96,7 +97,8 @@ function useBuiltFile(
         const built = await workerRef.current?.[method]({ colors, tolerance, softness }, Math.log2(boost));
         if (cancelled || !built) return;
         publish(built.jpeg);
-      } catch {
+      } catch (caught) {
+        logError(`building the ${method === "build" ? "HDR" : "PQ"} JPEG failed`, caught);
         if (!cancelled) onError();
       } finally {
         if (!cancelled) setBusy(false);
@@ -242,6 +244,7 @@ export function ImageTool({ support }: Props) {
       pqFile.clear();
       setPixelsVersion((version) => version + 1);
     } catch (caught) {
+      logError("reading the image failed", caught);
       decoded?.close();
       setError(
         svg && caught instanceof Error
@@ -276,7 +279,10 @@ export function ImageTool({ support }: Props) {
           appliedBackground.current = background;
           setPixelsVersion((version) => version + 1);
         })
-        .catch(() => setError("Could not change the background."));
+        .catch((caught) => {
+          logError("changing the background failed", caught);
+          setError("Could not change the background.");
+        });
     }, BACKGROUND_DELAY);
     return () => window.clearTimeout(timer);
   }, [bitmap, background]);
@@ -299,7 +305,8 @@ export function ImageTool({ support }: Props) {
         );
         setCoverage(preview.coverage);
         setMaskVersion((version) => version + 1);
-      } catch {
+      } catch (caught) {
+        logError("computing the mask failed", caught);
         if (!cancelled) setError("Could not compute the glow mask.");
       }
     }, PREVIEW_DELAY);
@@ -320,7 +327,8 @@ export function ImageTool({ support }: Props) {
   const loadSample = async (id: SampleId) => {
     try {
       await loadFile(await makeSample(id));
-    } catch {
+    } catch (caught) {
+      logError("loading the sample failed", caught);
       setError("Could not draw the sample.");
     }
   };
@@ -337,7 +345,8 @@ export function ImageTool({ support }: Props) {
         (event.clientY - rect.top) / rect.height,
       );
       if (color) addColor(color);
-    } catch {
+    } catch (caught) {
+      logError("picking a color failed", caught);
       setError("Could not read the color there.");
     }
   };
