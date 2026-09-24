@@ -4,7 +4,7 @@
 const DISPLAY_SIDE = 900;
 
 /** The size every preview canvas uses. The worker's mask preview has the same. */
-export function displaySize(bitmap: ImageBitmap): { width: number; height: number } {
+function displaySize(bitmap: ImageBitmap): { width: number; height: number } {
   const scale = Math.min(1, DISPLAY_SIDE / Math.max(bitmap.width, bitmap.height));
   return {
     width: Math.max(1, Math.round(bitmap.width * scale)),
@@ -54,8 +54,15 @@ export function drawSimulated(
     const maskRow = Math.min(mask.height - 1, Math.floor((y * mask.height) / height)) * mask.width;
     for (let x = 0; x < width; x++) {
       const offset = (y * width + x) * 4;
-      const strengthHere = maskPixels.data[(maskRow + Math.min(mask.width - 1, Math.floor((x * mask.width) / width))) * 4];
-      const brightest = Math.max(pixels.data[offset], pixels.data[offset + 1], pixels.data[offset + 2]);
+      const strengthHere =
+        maskPixels.data[
+          (maskRow + Math.min(mask.width - 1, Math.floor((x * mask.width) / width))) * 4
+        ];
+      const brightest = Math.max(
+        pixels.data[offset],
+        pixels.data[offset + 1],
+        pixels.data[offset + 2],
+      );
       const scale = brightest > 0 ? 1 + (255 / brightest - 1) * lift : 1;
       pixels.data[offset] = Math.min(255, pixels.data[offset] * scale);
       pixels.data[offset + 1] = Math.min(255, pixels.data[offset + 1] * scale);

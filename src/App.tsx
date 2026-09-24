@@ -6,13 +6,7 @@ import { Nav } from "./Nav";
 import { SwatchGenerator } from "./SwatchGenerator";
 import { TextExample } from "./TextExample";
 import { describeSupport, useHdrSupport } from "./useHdrDisplay";
-import {
-  HDR_CLASS,
-  HDR_CSS,
-  PLAIN_CLASS,
-  PLAIN_CSS,
-  SWATCH_FILE,
-} from "./snippets";
+import { HDR_CLASS, HDR_CSS, PLAIN_CLASS, PLAIN_CSS, SWATCH_FILE } from "./snippets";
 
 export function App() {
   const support = useHdrSupport();
@@ -62,8 +56,8 @@ export function App() {
                 <a href={`/${SWATCH_FILE}`} download>
                   download {SWATCH_FILE}
                 </a>{" "}
-                (3 KB, up to 7.5× brighter than #fff). Use it for headlines and
-                accents, not paragraphs.
+                (3 KB, up to 7.5× brighter than #fff). Use it for headlines and accents, not
+                paragraphs.
               </>
             }
           />
@@ -78,7 +72,6 @@ export function App() {
             css={PLAIN_CSS}
             defaultText="Glow on HDR screens"
           />
-
         </section>
 
         <Explainer />

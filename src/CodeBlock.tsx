@@ -27,12 +27,12 @@ export function CodeBlock({ label, code }: Props) {
           {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy"}
         </button>
       </figcaption>
+      {/* A scrollable region has to be focusable, or keyboard users cannot scroll it. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <pre className="code__body" tabIndex={0}>
         <code>{code}</code>
       </pre>
-      <span className="sr-only" role="status">
-        {state === "copied" ? `${label} copied` : ""}
-      </span>
+      <output className="sr-only">{state === "copied" ? `${label} copied` : ""}</output>
     </figure>
   );
 }

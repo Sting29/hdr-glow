@@ -39,7 +39,11 @@ async function handle(request: WorkerRequest): Promise<void> {
         scope.postMessage({ id: request.id, ok: true });
         break;
       case "pick":
-        scope.postMessage({ id: request.id, ok: true, result: pipeline.pick(request.x, request.y) });
+        scope.postMessage({
+          id: request.id,
+          ok: true,
+          result: pipeline.pick(request.x, request.y),
+        });
         break;
       case "preview": {
         const result = pipeline.preview(request.params);

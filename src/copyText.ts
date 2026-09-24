@@ -6,7 +6,7 @@ export async function copyText(text: string): Promise<boolean> {
       return true;
     }
   } catch {
-    // fall through to the legacy path
+    // Expected when the clipboard API is blocked; the legacy path below covers it.
   }
 
   const area = document.createElement("textarea");

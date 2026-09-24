@@ -26,11 +26,7 @@ export const PLAIN_CSS = `.${PLAIN_CLASS} {
 }`;
 
 const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export const htmlFor = (className: string, text: string) =>
   `<p class="${className}">${escapeHtml(text.trim() || "Your text")}</p>`;

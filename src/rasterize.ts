@@ -1,3 +1,4 @@
+import { logError } from "./log";
 import { MAX_SIDE } from "./tool/protocol";
 
 export const isSvg = (file: File) => file.type === "image/svg+xml" || /\.svg$/i.test(file.name);
@@ -11,7 +12,8 @@ async function decode(svgText: string): Promise<HTMLImageElement> {
     image.src = url;
     await image.decode();
     return image;
-  } catch {
+  } catch (caught) {
+    logError("decoding the SVG failed", caught);
     throw new Error("This SVG could not be read.");
   } finally {
     URL.revokeObjectURL(url);

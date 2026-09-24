@@ -1,28 +1,40 @@
 // Run: npm run check
-// Checks the pure image modules in Node (no browser, no build step).
+// Checks the pure image modules in Node with Vitest (no browser).
 import assert from "node:assert/strict";
+import { test } from "vitest";
 import { readFileSync } from "node:fs";
-import { addGlowColor, MAX_GLOW_COLORS, parseHex, sameColor } from "../../src/tool/colors.ts";
+import {
+  addGlowColor,
+  MAX_GLOW_COLORS,
+  parseHex,
+  sameColor,
+  toHex,
+} from "../../src/tool/colors.ts";
 import { assembleGainMapJpeg, embedIccProfile } from "../../src/tool/container.ts";
+import { buildSwatch } from "../../src/tool/swatch.ts";
 import { encodeGrayJpeg, encodeRgbJpeg } from "../../src/tool/jpeg.ts";
 import { computeMask, suggestColors, toOklab } from "../../src/tool/mask.ts";
 import { detectBrowser } from "../../src/browserSupport.ts";
-import { createPqProfile, encodePq, pqDecode, pqEncode, rec2020Colorants } from "../../src/tool/pq.ts";
-
-let failed = 0;
-const test = (name, fn) => {
-  try {
-    fn();
-    console.log("ok   ", name);
-  } catch (error) {
-    failed++;
-    console.log("FAIL ", name, "\n     ", error.message);
-  }
-};
+import {
+  createPqProfile,
+  encodePq,
+  pqDecode,
+  pqEncode,
+  rec2020Colorants,
+} from "../../src/tool/pq.ts";
 
 // ---- container: must reproduce the libultrahdr swatch byte for byte ----
-const reference = new Uint8Array(readFileSync(new URL("../../public/hdr-glow-swatch-7.5x.jpg", import.meta.url)));
-const cut = reference.findIndex((_, i) => reference[i] === 0xff && reference[i + 1] === 0xd9 && reference[i + 2] === 0xff && reference[i + 3] === 0xd8) + 2;
+const reference = new Uint8Array(
+  readFileSync(new URL("../../public/hdr-glow-swatch-7.5x.jpg", import.meta.url)),
+);
+const cut =
+  reference.findIndex(
+    (_, i) =>
+      reference[i] === 0xff &&
+      reference[i + 1] === 0xd9 &&
+      reference[i + 2] === 0xff &&
+      reference[i + 3] === 0xd8,
+  ) + 2;
 
 test("container: hdr-glow-swatch-7.5x.jpg is rebuilt byte for byte", () => {
   const rebuilt = assembleGainMapJpeg({
@@ -47,7 +59,13 @@ test("container: other boosts change only the numbers", () => {
 });
 
 test("container: rejects a boost that would not brighten anything", () => {
-  assert.throws(() => assembleGainMapJpeg({ base: reference.subarray(0, cut), gainMap: reference.subarray(cut), maxBoost: 1 }));
+  assert.throws(() =>
+    assembleGainMapJpeg({
+      base: reference.subarray(0, cut),
+      gainMap: reference.subarray(cut),
+      maxBoost: 1,
+    }),
+  );
 });
 
 // ---- gray JPEG: structure (decoding is checked separately against the OS decoder) ----
@@ -67,7 +85,12 @@ test("gray jpeg: one component, right size, ends with EOI", () => {
 test("rgb jpeg: three components with 1x1 sampling, right size, ends with EOI", () => {
   const width = 19;
   const height = 11;
-  const jpeg = encodeRgbJpeg(new Uint8Array(width * height * 3).map((_, i) => (i * 5) % 256), width, height, 98);
+  const jpeg = encodeRgbJpeg(
+    new Uint8Array(width * height * 3).map((_, i) => (i * 5) % 256),
+    width,
+    height,
+    98,
+  );
   assert.deepEqual([jpeg[0], jpeg[1]], [0xff, 0xd8]);
   assert.deepEqual([jpeg[jpeg.length - 2], jpeg[jpeg.length - 1]], [0xff, 0xd9]);
   const sof = jpeg.findIndex((_, i) => jpeg[i] === 0xff && jpeg[i + 1] === 0xc0);
@@ -101,7 +124,10 @@ test("pq: a partial mask boosts less, in stops", () => {
   const rgba = new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255]);
   const out = encodePq(rgba, new Uint8Array([0, 128]), 2);
   const ratio = pqDecode(out[3] / 255) / pqDecode(out[0] / 255);
-  assert.ok(Math.abs(Math.log2(ratio) - (2 * 128) / 255) < 0.03, `half mask is ${Math.log2(ratio)} stops`);
+  assert.ok(
+    Math.abs(Math.log2(ratio) - (2 * 128) / 255) < 0.03,
+    `half mask is ${Math.log2(ratio)} stops`,
+  );
 });
 
 test("icc: valid header, tag table inside the file, cicp says BT.2020 + PQ, colorants add up to D50", () => {
@@ -117,17 +143,37 @@ test("icc: valid header, tag table inside the file, cicp says BT.2020 + PQ, colo
     assert.ok(offset % 4 === 0 && offset + size <= profile.length, "tag inside the file");
     tags[Buffer.from(profile.subarray(at, at + 4)).toString()] = offset;
   }
-  for (const name of ["desc", "cprt", "wtpt", "rXYZ", "gXYZ", "bXYZ", "rTRC", "gTRC", "bTRC", "chad", "cicp"]) {
+  for (const name of [
+    "desc",
+    "cprt",
+    "wtpt",
+    "rXYZ",
+    "gXYZ",
+    "bXYZ",
+    "rTRC",
+    "gTRC",
+    "bTRC",
+    "chad",
+    "cicp",
+  ]) {
     assert.ok(name in tags, `${name} present`);
   }
   assert.deepEqual(Array.from(profile.subarray(tags.cicp + 8, tags.cicp + 12)), [9, 16, 0, 1]);
   const sum = [0, 1, 2].map((axis) => rec2020Colorants().reduce((total, c) => total + c[axis], 0));
-  assert.ok(Math.abs(sum[0] - 0.9642) < 1e-3 && Math.abs(sum[1] - 1) < 1e-3 && Math.abs(sum[2] - 0.8249) < 1e-3, sum.join(" "));
+  assert.ok(
+    Math.abs(sum[0] - 0.9642) < 1e-3 &&
+      Math.abs(sum[1] - 1) < 1e-3 &&
+      Math.abs(sum[2] - 0.8249) < 1e-3,
+    sum.join(" "),
+  );
   // the fallback curve for software that ignores cicp: clipped at SDR white
   const curve = tags.rTRC + 12;
   const last = view.getUint16(curve + 2 * 4095);
   assert.equal(last, 65535, "clipped at the top");
-  assert.ok(view.getUint16(curve + 2 * 100) < view.getUint16(curve + 2 * 2000), "rises with the signal");
+  assert.ok(
+    view.getUint16(curve + 2 * 100) < view.getUint16(curve + 2 * 2000),
+    "rises with the signal",
+  );
 });
 
 test("icc: embedIccProfile puts one ICC segment right after the JFIF header and drops other metadata", () => {
@@ -146,18 +192,49 @@ test("icc: embedIccProfile puts one ICC segment right after the JFIF header and 
 
 // ---- browser support ----
 test("browser: Chrome 137+ and Safari 26+ show HDR, older ones and Firefox do not", () => {
-  const mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)";
+  const mac =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)";
   const cases = [
     [`${mac} Chrome/152.0.0.0 Safari/537.36`, "Chrome", 152, true],
     [`${mac} Chrome/137.0.0.0 Safari/537.36`, "Chrome", 137, true],
     [`${mac} Chrome/136.0.0.0 Safari/537.36`, "Chrome", 136, false],
     [`${mac} Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0`, "Edge", 138, true],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", "Safari", 26, true],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15", "Safari", 18, false],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1", "Safari", 26, true],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/152.0.7977.76 Mobile/15E148 Safari/604.1", "Chrome", 18, false],
-    ["Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/152.0.7977.76 Mobile/15E148 Safari/604.1", "Chrome", 26, true],
-    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0", "Firefox", 140, false],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
+      "Safari",
+      26,
+      true,
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
+      "Safari",
+      18,
+      false,
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+      "Safari",
+      26,
+      true,
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/152.0.7977.76 Mobile/15E148 Safari/604.1",
+      "Chrome",
+      18,
+      false,
+    ],
+    [
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/152.0.7977.76 Mobile/15E148 Safari/604.1",
+      "Chrome",
+      26,
+      true,
+    ],
+    [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0",
+      "Firefox",
+      140,
+      false,
+    ],
     ["SomethingElse/1.0", "Your browser", 0, false],
   ];
   for (const [ua, name, version, showsHdr] of cases) {
@@ -182,18 +259,33 @@ const WHITE = { r: 255, g: 255, b: 255 };
 const GREEN = { r: 0, g: 200, b: 60 };
 
 test("mask: white glows, black does not, nothing chosen means nothing glows", () => {
-  const list = [[255, 255, 255], [0, 0, 0], [0, 200, 60]];
+  const list = [
+    [255, 255, 255],
+    [0, 0, 0],
+    [0, 200, 60],
+  ];
   assert.deepEqual(maskOf(list, { colors: [WHITE], tolerance: 0.1, softness: 0 }), [255, 0, 0]);
   assert.deepEqual(maskOf(list, { colors: [], tolerance: 0.1, softness: 0 }), [0, 0, 0]);
 });
 
 test("mask: several colors, and the black of a green-on-black logo stays out", () => {
-  const list = [[255, 255, 255], [0, 200, 60], [0, 0, 0]];
-  assert.deepEqual(maskOf(list, { colors: [WHITE, GREEN], tolerance: 0.1, softness: 0 }), [255, 255, 0]);
+  const list = [
+    [255, 255, 255],
+    [0, 200, 60],
+    [0, 0, 0],
+  ];
+  assert.deepEqual(
+    maskOf(list, { colors: [WHITE, GREEN], tolerance: 0.1, softness: 0 }),
+    [255, 255, 0],
+  );
 });
 
 test("mask: transparent pixels never glow, half-transparent ones glow half", () => {
-  const list = [[255, 255, 255, 0], [255, 255, 255, 128], [255, 255, 255, 255]];
+  const list = [
+    [255, 255, 255, 0],
+    [255, 255, 255, 128],
+    [255, 255, 255, 255],
+  ];
   assert.deepEqual(maskOf(list, { colors: [WHITE], tolerance: 0.1, softness: 0 }), [0, 128, 255]);
 });
 
@@ -202,9 +294,18 @@ test("mask: softness fades out between the inner radius and the tolerance", () =
   const hard = maskOf(grays, { colors: [WHITE], tolerance: 0.15, softness: 0 });
   const soft = maskOf(grays, { colors: [WHITE], tolerance: 0.15, softness: 1 });
   assert.equal(hard[0], 255);
-  assert.ok(hard.every((v) => v === 0 || v === 255), "hard edge has only 0 and 255");
-  assert.ok(soft.some((v) => v > 0 && v < 255), "soft edge has in-between values");
-  assert.ok(soft.every((v, i) => i === 0 || v <= soft[i - 1]), "gets weaker as gray gets darker");
+  assert.ok(
+    hard.every((v) => v === 0 || v === 255),
+    "hard edge has only 0 and 255",
+  );
+  assert.ok(
+    soft.some((v) => v > 0 && v < 255),
+    "soft edge has in-between values",
+  );
+  assert.ok(
+    soft.every((v, i) => i === 0 || v <= soft[i - 1]),
+    "gets weaker as gray gets darker",
+  );
 });
 
 test("suggest: picks white on a dark logo, a light non-white color when there is no white, nothing on a plain background", () => {
@@ -218,18 +319,25 @@ test("suggest: picks white on a dark logo, a light non-white color when there is
   assert.deepEqual(suggest(dark), [WHITE]);
   const found = suggest(cream);
   assert.equal(found.length, 1);
-  assert.ok(Math.abs(found[0].r - 245) <= 8 && Math.abs(found[0].b - 200) <= 8, JSON.stringify(found));
+  assert.ok(
+    Math.abs(found[0].r - 245) <= 8 && Math.abs(found[0].b - 200) <= 8,
+    JSON.stringify(found),
+  );
   assert.deepEqual(suggest(plain), []);
 });
 
 test("suggest: a white shape on a transparent background is still white", () => {
-  const star = Array.from({ length: 1000 }, (_, i) => (i < 300 ? [255, 255, 255, 255] : [0, 0, 0, 0]));
+  const star = Array.from({ length: 1000 }, (_, i) =>
+    i < 300 ? [255, 255, 255, 255] : [0, 0, 0, 0],
+  );
   const { lab, rgba, alpha } = pixelsOf(star);
   assert.deepEqual(suggestColors(lab, rgba, alpha), [WHITE]);
 });
 
 test("suggest: white comes first even when a green covers more of the image, but both are offered", () => {
-  const list = Array.from({ length: 1000 }, (_, i) => (i < 100 ? [255, 255, 255] : i < 400 ? [0, 200, 60] : [0, 0, 0]));
+  const list = Array.from({ length: 1000 }, (_, i) =>
+    i < 100 ? [255, 255, 255] : i < 400 ? [0, 200, 60] : [0, 0, 0],
+  );
   const { lab, rgba, alpha } = pixelsOf(list);
   assert.deepEqual(suggestColors(lab, rgba, alpha), [WHITE, GREEN]);
 });
@@ -237,7 +345,9 @@ test("suggest: white comes first even when a green covers more of the image, but
 test("suggest: a metallic gradient (white fading to gray) offers several shades, not just white", () => {
   // A silver logo like the sample lighthouse: a spread of grays from white down to mid-gray,
   // one band per suggestion slot so full coverage is actually reachable.
-  const shades = [255, 230, 205, 185, 165].flatMap((v) => Array.from({ length: 40 }, () => [v, v, v]));
+  const shades = [255, 230, 205, 185, 165].flatMap((v) =>
+    Array.from({ length: 40 }, () => [v, v, v]),
+  );
   const background = Array.from({ length: 4000 }, () => [20, 20, 30]);
   const { lab, rgba, alpha } = pixelsOf([...shades, ...background]);
   const found = suggestColors(lab, rgba, alpha);
@@ -246,9 +356,17 @@ test("suggest: a metallic gradient (white fading to gray) offers several shades,
   assert.ok(found.length <= 5, "capped at a handful of suggestions");
   // covering the gradient means computeMask lights up all seven shades at once
   const mask = new Uint8Array(shades.length);
-  computeMask(toOklab(pixelsOf(shades).rgba), pixelsOf(shades).alpha, { colors: found, tolerance: 0.12, softness: 0.5 }, mask);
+  computeMask(
+    toOklab(pixelsOf(shades).rgba),
+    pixelsOf(shades).alpha,
+    { colors: found, tolerance: 0.12, softness: 0.5 },
+    mask,
+  );
   const litFraction = mask.reduce((sum, v) => sum + (v > 0 ? 1 : 0), 0) / mask.length;
-  assert.ok(litFraction > 0.9, `expected almost the whole gradient to glow, only ${litFraction * 100}% did`);
+  assert.ok(
+    litFraction > 0.9,
+    `expected almost the whole gradient to glow, only ${litFraction * 100}% did`,
+  );
 });
 
 test("suggest: near-duplicate shades collapse into one suggestion", () => {
@@ -263,18 +381,6 @@ test("suggest: near-duplicate shades collapse into one suggestion", () => {
 });
 
 // ---- swatch: the user-adjustable background-clip: text swatch ----
-// Mirrors buildSwatch() in src/tool/swatch.ts. That file can't be imported here directly:
-// it imports container.ts/jpeg.ts by extensionless specifier for Vite, which Node's own
-// ESM loader (used to run this file) requires an extension for.
-const SWATCH_SIZE = 64;
-const buildSwatch = (boost) => {
-  const white = new Uint8Array(SWATCH_SIZE * SWATCH_SIZE * 3).fill(255);
-  const base = encodeRgbJpeg(white, SWATCH_SIZE, SWATCH_SIZE, 100);
-  const full = new Uint8Array(SWATCH_SIZE * SWATCH_SIZE).fill(255);
-  const gainMap = encodeGrayJpeg(full, SWATCH_SIZE, SWATCH_SIZE, 95);
-  return assembleGainMapJpeg({ base, gainMap, maxBoost: boost });
-};
-
 test("swatch: buildSwatch returns a JPEG that starts with SOI and ends with EOI", () => {
   const jpeg = buildSwatch(7.5);
   assert.deepEqual([jpeg[0], jpeg[1]], [0xff, 0xd8]);
@@ -330,13 +436,12 @@ test("addGlowColor: stops at MAX_GLOW_COLORS", () => {
   assert.equal(result.length, MAX_GLOW_COLORS);
 });
 
+test("toHex: pads each channel and round-trips with parseHex", () => {
+  assert.equal(toHex({ r: 0, g: 10, b: 255 }), "#000aff");
+  assert.deepEqual(parseHex(toHex({ r: 168, g: 107, b: 255 })), { r: 168, g: 107, b: 255 });
+});
+
 test("sameColor: compares by value, not reference", () => {
   assert.ok(sameColor({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 3 }));
   assert.ok(!sameColor({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 4 }));
 });
-
-if (failed) {
-  console.log(`\n${failed} failed`);
-  process.exit(1);
-}
-console.log("\nall passed");

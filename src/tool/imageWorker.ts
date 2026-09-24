@@ -3,11 +3,12 @@ import type {
   BuildResult,
   LoadResult,
   PreviewResult,
+  Requests,
+  Results,
+  Skippable,
   WorkerRequest,
   WorkerResponse,
 } from "./protocol";
-
-type WithoutId<T> = T extends unknown ? Omit<T, "id"> : never;
 
 type Pending = {
   resolve: (response: WorkerResponse) => void;
@@ -32,30 +33,30 @@ export class ImageWorker {
 
   /** Copies the bitmap into the worker; the caller keeps its own. */
   load(bitmap: ImageBitmap, background: string): Promise<LoadResult> {
-    return this.ask({ type: "load", bitmap, background }) as Promise<LoadResult>;
+    return this.ask("load", { bitmap, background });
   }
 
   async setBackground(background: string): Promise<void> {
-    await this.ask({ type: "background", background });
+    await this.ask("background", { background });
   }
 
   pick(x: number, y: number): Promise<RGB> {
-    return this.ask({ type: "pick", x, y }) as Promise<RGB>;
+    return this.ask("pick", { x, y });
   }
 
   /** Resolves to null when a newer preview made this one unnecessary. */
   preview(params: MaskParams): Promise<PreviewResult | null> {
-    return this.ask({ type: "preview", params }) as Promise<PreviewResult | null>;
+    return this.ask("preview", { params });
   }
 
   /** Resolves to null when a newer build made this one unnecessary. */
   build(params: MaskParams, stops: number): Promise<BuildResult | null> {
-    return this.ask({ type: "build", params, stops }) as Promise<BuildResult | null>;
+    return this.ask("build", { params, stops });
   }
 
   /** Resolves to null when a newer build made this one unnecessary. */
   buildPq(params: MaskParams, stops: number): Promise<BuildResult | null> {
-    return this.ask({ type: "buildPq", params, stops }) as Promise<BuildResult | null>;
+    return this.ask("buildPq", { params, stops });
   }
 
   dispose(): void {
@@ -63,11 +64,16 @@ export class ImageWorker {
     this.rejectAll(new Error("The image worker was closed"));
   }
 
-  private async ask(request: WithoutId<WorkerRequest>): Promise<unknown> {
+  private ask<K extends Skippable>(type: K, payload: Requests[K]): Promise<Results[K] | null>;
+  private ask<K extends Exclude<keyof Results, Skippable>>(
+    type: K,
+    payload: Requests[K],
+  ): Promise<Results[K]>;
+  private async ask(type: keyof Results, payload: Requests[keyof Requests]): Promise<unknown> {
     const id = this.nextId++;
     const response = await new Promise<WorkerResponse>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage({ ...request, id });
+      this.worker.postMessage({ ...payload, type, id } as WorkerRequest);
     });
     if (!response.ok) throw new Error(response.error);
     return response.skipped ? null : response.result;
