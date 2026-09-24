@@ -213,19 +213,25 @@ export function ImageTool({ support }: Props) {
       setError(`This file is ${formatSize(file.size)}. Use one under ${formatSize(sizeLimit)}.`);
       return;
     }
+    // Until the bitmap is handed to state it belongs to this function, so every
+    // early exit and failure has to close it.
+    let decoded: ImageBitmap | null = null;
     try {
-      const decoded = svg ? await rasterizeSvg(file) : await createImageBitmap(file);
-      if (decoded.width * decoded.height > MAX_MEGAPIXELS * 1_000_000) {
+      decoded = svg ? await rasterizeSvg(file) : await createImageBitmap(file);
+      const { width, height } = decoded;
+      if (width * height > MAX_MEGAPIXELS * 1_000_000) {
+        setError(`This image is ${width}×${height}, too large to process. Use one under ${MAX_MEGAPIXELS} megapixels.`);
         decoded.close();
-        setError(`This image is ${decoded.width}×${decoded.height}, too large to process. Use one under ${MAX_MEGAPIXELS} megapixels.`);
         return;
       }
       const info = await worker.load(decoded, background);
+      const accepted = decoded;
+      decoded = null;
       appliedBackground.current = background;
       setBitmap((previous) => {
         // The old bitmap is released once React has stopped drawing it.
         if (previous) queueMicrotask(() => previous.close());
-        return decoded;
+        return accepted;
       });
       setFileName(file.name.replace(/\.[^.]+$/, "") || "logo");
       setFromSvg(svg);
@@ -236,6 +242,7 @@ export function ImageTool({ support }: Props) {
       pqFile.clear();
       setPixelsVersion((version) => version + 1);
     } catch (caught) {
+      decoded?.close();
       setError(
         svg && caught instanceof Error
           ? caught.message
