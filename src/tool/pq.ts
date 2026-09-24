@@ -10,7 +10,7 @@ const C2 = (2413 / 4096) * 32;
 const C3 = (2392 / 4096) * 32;
 
 /** Brightness of "SDR white" in a PQ picture, per ITU-R BT.2408. */
-export const REFERENCE_WHITE_NITS = 203;
+const REFERENCE_WHITE_NITS = 203;
 
 /** PQ signal (0 to 1) for a brightness in nits. */
 export function pqEncode(nits: number): number {

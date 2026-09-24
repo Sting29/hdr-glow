@@ -4,7 +4,7 @@
 const DISPLAY_SIDE = 900;
 
 /** The size every preview canvas uses. The worker's mask preview has the same. */
-export function displaySize(bitmap: ImageBitmap): { width: number; height: number } {
+function displaySize(bitmap: ImageBitmap): { width: number; height: number } {
   const scale = Math.min(1, DISPLAY_SIDE / Math.max(bitmap.width, bitmap.height));
   return {
     width: Math.max(1, Math.round(bitmap.width * scale)),

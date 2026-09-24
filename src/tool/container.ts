@@ -66,7 +66,7 @@ function readSegments(jpeg: Uint8Array): Segment[] {
 }
 
 /** The JPEG without APP1 (Exif, XMP) and APP2 (ICC, MPF) segments. */
-export function stripMetadata(jpeg: Uint8Array): Uint8Array {
+function stripMetadata(jpeg: Uint8Array): Uint8Array {
   const parts = [jpeg.subarray(0, 2)];
   for (const segment of readSegments(jpeg)) {
     if (segment.marker === MARKER_APP1 || segment.marker === MARKER_APP2) continue;
@@ -247,7 +247,7 @@ export function embedIccProfile(jpeg: Uint8Array, profile: Uint8Array): Uint8Arr
   return concat([plain.subarray(0, afterApp0), iccSegment(profile), plain.subarray(afterApp0)]);
 }
 
-export type GainMapJpegInput = {
+type GainMapJpegInput = {
   /** Plain JPEG of the visible (SDR) image. */
   base: Uint8Array;
   /** Plain grayscale JPEG, same size as base: 0 = no boost, 255 = full boost. */
