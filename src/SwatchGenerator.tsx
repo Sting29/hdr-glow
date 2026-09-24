@@ -11,11 +11,13 @@ export function SwatchGenerator() {
   const urlRef = useRef<string | null>(null);
   const [file, setFile] = useState<{ url: string; size: number } | null>(null);
 
+  // The object URL is an external resource, so it is created and stored from an effect.
   useEffect(() => {
     const jpeg = buildSwatch(boost) as Uint8Array<ArrayBuffer>;
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     const url = URL.createObjectURL(new Blob([jpeg], { type: "image/jpeg" }));
     urlRef.current = url;
+    // oxlint-disable-next-line react/set-state-in-effect
     setFile({ url, size: jpeg.length });
   }, [boost]);
 

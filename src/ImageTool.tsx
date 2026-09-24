@@ -85,11 +85,7 @@ function useBuiltFile(
   );
 
   useEffect(() => {
-    if (!ready) return;
-    if (colors.length === 0) {
-      publish(null);
-      return;
-    }
+    if (!ready || colors.length === 0) return;
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       setBusy(true);
@@ -108,10 +104,12 @@ function useBuiltFile(
       cancelled = true;
       window.clearTimeout(timer);
     };
-    // publish and onError only touch state setters and refs
+    // publish and onError only touch state setters and refs, so they are left out on purpose.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, version, colors, tolerance, softness, boost, method, delay]);
 
-  return { file, busy, clear: () => publish(null) };
+  // With no colors chosen there is nothing to offer, whatever was built before.
+  return { file: colors.length === 0 ? null : file, busy, clear: () => publish(null) };
 }
 
 type CardProps = {
@@ -128,9 +126,9 @@ type CardProps = {
 function ResultCard({ title, lede, file, busy, downloadName, buttonLabel, emptyText, note }: CardProps) {
   return (
     <section className="result">
-      <p className="sr-only" role="status">
+      <output className="sr-only">
         {file ? `${title} ready, ${formatSize(file.size)}` : busy ? "Building…" : ""}
-      </p>
+      </output>
       <h3 className="result__title">{title}</h3>
       <p className="tool__note">{lede}</p>
       {file ? (
@@ -375,6 +373,8 @@ export function ImageTool({ support }: Props) {
         Pick the colors that should outshine the page. Everything else stays exactly as drawn.
       </p>
 
+      {/* Dropping is an extra; the file input inside is the keyboard path. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <label
         className="drop"
         data-active={dragging}
@@ -579,6 +579,7 @@ export function ImageTool({ support }: Props) {
 
           <section className="preview" aria-label="Preview">
             <h3 className="result__title">Preview</h3>
+            {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
             <div className="mode" role="group" aria-label="Preview mode">
               <button type="button" className="mode__button" aria-pressed={mode === "live"} onClick={() => setMode("live")}>
                 Real HDR
