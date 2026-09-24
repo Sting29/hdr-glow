@@ -30,14 +30,14 @@ const DC_BITS = [0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0];
 const DC_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const AC_BITS = [0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125];
 const AC_VALUES = [
-  1, 2, 3, 0, 4, 17, 5, 18, 33, 49, 65, 6, 19, 81, 97, 7, 34, 113, 20, 50, 129, 145, 161, 8, 35,
-  66, 177, 193, 21, 82, 209, 240, 36, 51, 98, 114, 130, 9, 10, 22, 23, 24, 25, 26, 37, 38, 39, 40,
-  41, 42, 52, 53, 54, 55, 56, 57, 58, 67, 68, 69, 70, 71, 72, 73, 74, 83, 84, 85, 86, 87, 88, 89,
-  90, 99, 100, 101, 102, 103, 104, 105, 106, 115, 116, 117, 118, 119, 120, 121, 122, 131, 132, 133,
-  134, 135, 136, 137, 138, 146, 147, 148, 149, 150, 151, 152, 153, 154, 162, 163, 164, 165, 166,
-  167, 168, 169, 170, 178, 179, 180, 181, 182, 183, 184, 185, 186, 194, 195, 196, 197, 198, 199,
-  200, 201, 202, 210, 211, 212, 213, 214, 215, 216, 217, 218, 225, 226, 227, 228, 229, 230, 231,
-  232, 233, 234, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250,
+  1, 2, 3, 0, 4, 17, 5, 18, 33, 49, 65, 6, 19, 81, 97, 7, 34, 113, 20, 50, 129, 145, 161, 8, 35, 66,
+  177, 193, 21, 82, 209, 240, 36, 51, 98, 114, 130, 9, 10, 22, 23, 24, 25, 26, 37, 38, 39, 40, 41,
+  42, 52, 53, 54, 55, 56, 57, 58, 67, 68, 69, 70, 71, 72, 73, 74, 83, 84, 85, 86, 87, 88, 89, 90,
+  99, 100, 101, 102, 103, 104, 105, 106, 115, 116, 117, 118, 119, 120, 121, 122, 131, 132, 133, 134,
+  135, 136, 137, 138, 146, 147, 148, 149, 150, 151, 152, 153, 154, 162, 163, 164, 165, 166, 167,
+  168, 169, 170, 178, 179, 180, 181, 182, 183, 184, 185, 186, 194, 195, 196, 197, 198, 199, 200,
+  201, 202, 210, 211, 212, 213, 214, 215, 216, 217, 218, 225, 226, 227, 228, 229, 230, 231, 232,
+  233, 234, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250,
 ];
 
 type HuffmanTable = { codes: Uint16Array; sizes: Uint8Array };
@@ -97,7 +97,8 @@ class BitWriter {
 const BASIS = new Float64Array(64);
 for (let u = 0; u < 8; u++) {
   for (let x = 0; x < 8; x++) {
-    BASIS[u * 8 + x] = (u === 0 ? Math.SQRT1_2 : 1) * 0.5 * Math.cos(((2 * x + 1) * u * Math.PI) / 16);
+    BASIS[u * 8 + x] =
+      (u === 0 ? Math.SQRT1_2 : 1) * 0.5 * Math.cos(((2 * x + 1) * u * Math.PI) / 16);
   }
 }
 
@@ -223,21 +224,67 @@ function encodePlanes(planes: Uint8Array[], width: number, height: number, quali
   const count = planes.length;
   const componentIds = planes.map((_, i) => i + 1);
   const header = [
-    0xff, 0xd8,
+    0xff,
+    0xd8,
     // APP0 JFIF 1.01, no density
-    0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01,
-    0x00, 0x00,
+    0xff,
+    0xe0,
+    0x00,
+    0x10,
+    0x4a,
+    0x46,
+    0x49,
+    0x46,
+    0x00,
+    0x01,
+    0x01,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
     // DQT
-    0xff, 0xdb, 0x00, 0x43, 0x00, ...ZIGZAG.map((natural) => quant[natural]),
+    0xff,
+    0xdb,
+    0x00,
+    0x43,
+    0x00,
+    ...ZIGZAG.map((natural) => quant[natural]),
     // SOF0: 8 bit, 1x1 sampling and quantization table 0 for every component
-    0xff, 0xc0, ...u16(8 + 3 * count), 0x08, ...u16(height), ...u16(width), count,
+    0xff,
+    0xc0,
+    ...u16(8 + 3 * count),
+    0x08,
+    ...u16(height),
+    ...u16(width),
+    count,
     ...componentIds.flatMap((id) => [id, 0x11, 0x00]),
     // DHT: DC table 0, then AC table 0
-    0xff, 0xc4, 0x00, 0x1f, 0x00, ...DC_BITS, ...DC_VALUES,
-    0xff, 0xc4, 0x00, 0xb5, 0x10, ...AC_BITS, ...AC_VALUES,
+    0xff,
+    0xc4,
+    0x00,
+    0x1f,
+    0x00,
+    ...DC_BITS,
+    ...DC_VALUES,
+    0xff,
+    0xc4,
+    0x00,
+    0xb5,
+    0x10,
+    ...AC_BITS,
+    ...AC_VALUES,
     // SOS: every component uses DC table 0 and AC table 0
-    0xff, 0xda, ...u16(6 + 2 * count), count, ...componentIds.flatMap((id) => [id, 0x00]),
-    0x00, 0x3f, 0x00,
+    0xff,
+    0xda,
+    ...u16(6 + 2 * count),
+    count,
+    ...componentIds.flatMap((id) => [id, 0x00]),
+    0x00,
+    0x3f,
+    0x00,
   ];
   const scan = bits.finish();
   const out = new Uint8Array(header.length + scan.length + 2);

@@ -65,7 +65,10 @@ export class ImageWorker {
   }
 
   private ask<K extends Skippable>(type: K, payload: Requests[K]): Promise<Results[K] | null>;
-  private ask<K extends Exclude<keyof Results, Skippable>>(type: K, payload: Requests[K]): Promise<Results[K]>;
+  private ask<K extends Exclude<keyof Results, Skippable>>(
+    type: K,
+    payload: Requests[K],
+  ): Promise<Results[K]>;
   private async ask(type: keyof Results, payload: Requests[keyof Requests]): Promise<unknown> {
     const id = this.nextId++;
     const response = await new Promise<WorkerResponse>((resolve, reject) => {

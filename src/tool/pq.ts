@@ -31,7 +31,7 @@ for (let i = 0; i < 256; i++) {
 }
 
 // Linear Rec.709 / sRGB primaries to linear Rec.2020 primaries (ITU-R BT.2087).
-const R = [0.6274039, 0.3292830, 0.0433131];
+const R = [0.6274039, 0.329283, 0.0433131];
 const G = [0.0690973, 0.9195404, 0.0113623];
 const B = [0.0163914, 0.0880133, 0.8955953];
 
@@ -71,15 +71,22 @@ const s15 = (value: number) => Math.round(value * 65536);
 
 const D50 = [63190 / 65536, 1, 54061 / 65536]; // the ICC connection space white
 // Bradford adaptation D65 to D50.
-const BRADFORD = [1.0478112, 0.0228866, -0.050127, 0.0295424, 0.9904844, -0.0170491, -0.0092345, 0.0150436, 0.7521316];
+const BRADFORD = [
+  1.0478112, 0.0228866, -0.050127, 0.0295424, 0.9904844, -0.0170491, -0.0092345, 0.0150436,
+  0.7521316,
+];
 // Linear Rec.2020 to XYZ under D65.
-const REC2020_D65 = [0.636958, 0.1446169, 0.168881, 0.2627002, 0.6779981, 0.0593017, 0, 0.0280727, 1.0609851];
+const REC2020_D65 = [
+  0.636958, 0.1446169, 0.168881, 0.2627002, 0.6779981, 0.0593017, 0, 0.0280727, 1.0609851,
+];
 
 function multiply(a: number[], b: number[]): number[] {
   const out: number[] = [];
   for (let row = 0; row < 3; row++) {
     for (let column = 0; column < 3; column++) {
-      out.push(a[row * 3] * b[column] + a[row * 3 + 1] * b[3 + column] + a[row * 3 + 2] * b[6 + column]);
+      out.push(
+        a[row * 3] * b[column] + a[row * 3 + 1] * b[3 + column] + a[row * 3 + 2] * b[6 + column],
+      );
     }
   }
   return out;
@@ -97,7 +104,12 @@ class Writer {
     this.bytes.push((value >> 8) & 0xff, value & 0xff);
   }
   u32(value: number) {
-    this.bytes.push((value >>> 24) & 0xff, (value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff);
+    this.bytes.push(
+      (value >>> 24) & 0xff,
+      (value >>> 16) & 0xff,
+      (value >>> 8) & 0xff,
+      value & 0xff,
+    );
   }
   s32(value: number) {
     this.u32(value | 0);

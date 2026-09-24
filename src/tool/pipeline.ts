@@ -116,7 +116,10 @@ export class Pipeline {
     this.requireImage();
     this.updateMask(params);
     const rgb = encodePq(this.rgba, this.mask, stops);
-    const jpeg = embedIccProfile(encodeRgbJpeg(rgb, this.width, this.height, PQ_QUALITY), createPqProfile());
+    const jpeg = embedIccProfile(
+      encodeRgbJpeg(rgb, this.width, this.height, PQ_QUALITY),
+      createPqProfile(),
+    );
     return { jpeg: jpeg as Uint8Array<ArrayBuffer> };
   }
 

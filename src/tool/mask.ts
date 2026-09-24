@@ -128,7 +128,11 @@ const NEUTRAL_FAMILY = HUE_BINS; // one slot past the last hue bin
  * logo with a couple of honestly different brand colors gets one of each
  * instead of only the single most common tone.
  */
-export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha: Uint8Array): RGB[] {
+export function suggestColors(
+  lab: Float32Array,
+  rgba: Uint8ClampedArray,
+  alpha: Uint8Array,
+): RGB[] {
   const pixels = alpha.length;
   const counts = new Uint32Array(4096);
   const sums = new Float64Array(4096 * 3);
@@ -179,7 +183,9 @@ export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha:
   const add = (color: RGB): boolean => {
     const [L, a, b] = labOfColors([color]);
     for (let i = 0; i < chosenLab.length; i += 3) {
-      if (Math.hypot(L - chosenLab[i], a - chosenLab[i + 1], b - chosenLab[i + 2]) < MERGE_DISTANCE) {
+      if (
+        Math.hypot(L - chosenLab[i], a - chosenLab[i + 1], b - chosenLab[i + 2]) < MERGE_DISTANCE
+      ) {
         return false;
       }
     }
@@ -195,7 +201,10 @@ export function suggestColors(lab: Float32Array, rgba: Uint8ClampedArray, alpha:
     const share = familyShare[family] / pixels;
     if (share >= MIN_SHARE && share <= MAX_SHARE) families.push(family);
   }
-  const whiteQualifies = counts[0xfff] > 0 && bucketFamily[0xfff] === NEUTRAL_FAMILY && families.includes(NEUTRAL_FAMILY);
+  const whiteQualifies =
+    counts[0xfff] > 0 &&
+    bucketFamily[0xfff] === NEUTRAL_FAMILY &&
+    families.includes(NEUTRAL_FAMILY);
   families.sort((x, y) => {
     if (whiteQualifies) {
       if (x === NEUTRAL_FAMILY) return -1;

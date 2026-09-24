@@ -90,7 +90,10 @@ function useBuiltFile(
     const timer = window.setTimeout(async () => {
       setBusy(true);
       try {
-        const built = await workerRef.current?.[method]({ colors, tolerance, softness }, Math.log2(boost));
+        const built = await workerRef.current?.[method](
+          { colors, tolerance, softness },
+          Math.log2(boost),
+        );
         if (cancelled || !built) return;
         publish(built.jpeg);
       } catch (caught) {
@@ -123,7 +126,16 @@ type CardProps = {
   note: ReactNode;
 };
 
-function ResultCard({ title, lede, file, busy, downloadName, buttonLabel, emptyText, note }: CardProps) {
+function ResultCard({
+  title,
+  lede,
+  file,
+  busy,
+  downloadName,
+  buttonLabel,
+  emptyText,
+  note,
+}: CardProps) {
   return (
     <section className="result">
       <output className="sr-only">
@@ -220,7 +232,9 @@ export function ImageTool({ support }: Props) {
       decoded = svg ? await rasterizeSvg(file) : await createImageBitmap(file);
       const { width, height } = decoded;
       if (width * height > MAX_MEGAPIXELS * 1_000_000) {
-        setError(`This image is ${width}×${height}, too large to process. Use one under ${MAX_MEGAPIXELS} megapixels.`);
+        setError(
+          `This image is ${width}×${height}, too large to process. Use one under ${MAX_MEGAPIXELS} megapixels.`,
+        );
         decoded.close();
         return;
       }
@@ -296,11 +310,9 @@ export function ImageTool({ support }: Props) {
         if (cancelled || !preview || !canvas) return;
         canvas.width = preview.width;
         canvas.height = preview.height;
-        canvas.getContext("2d")!.putImageData(
-          new ImageData(preview.pixels, preview.width, preview.height),
-          0,
-          0,
-        );
+        canvas
+          .getContext("2d")!
+          .putImageData(new ImageData(preview.pixels, preview.width, preview.height), 0, 0);
         setCoverage(preview.coverage);
         setMaskVersion((version) => version + 1);
       } catch (caught) {
@@ -396,7 +408,9 @@ export function ImageTool({ support }: Props) {
           }}
         />
         <span className="drop__title">
-          {bitmap ? "Drag another image in, or click to browse" : "Drag a logo in, or click to browse"}
+          {bitmap
+            ? "Drag another image in, or click to browse"
+            : "Drag a logo in, or click to browse"}
         </span>
         <span className="drop__hint">
           PNG, JPEG, WebP, AVIF or SVG. Processed in your browser, nothing is uploaded.
@@ -406,7 +420,12 @@ export function ImageTool({ support }: Props) {
       <p className="samples">
         No logo at hand? Try a sample:
         {SAMPLES.map((sample) => (
-          <button key={sample.id} type="button" className="samples__button" onClick={() => void loadSample(sample.id)}>
+          <button
+            key={sample.id}
+            type="button"
+            className="samples__button"
+            onClick={() => void loadSample(sample.id)}
+          >
             {sample.label}
           </button>
         ))}
@@ -468,7 +487,9 @@ export function ImageTool({ support }: Props) {
                 ) : null}
               </ul>
 
-              <p className="hex-add__hint">Know the exact color? Type its hex code to add it here.</p>
+              <p className="hex-add__hint">
+                Know the exact color? Type its hex code to add it here.
+              </p>
 
               <form
                 className="hex-add"
@@ -524,7 +545,10 @@ export function ImageTool({ support }: Props) {
             </div>
 
             <label className="field">
-              <span>Color range: {Math.round(((tolerance - MIN_TOLERANCE) / (MAX_TOLERANCE - MIN_TOLERANCE)) * 100)}%</span>
+              <span>
+                Color range:{" "}
+                {Math.round(((tolerance - MIN_TOLERANCE) / (MAX_TOLERANCE - MIN_TOLERANCE)) * 100)}%
+              </span>
               <input
                 type="range"
                 min={MIN_TOLERANCE}
@@ -581,10 +605,20 @@ export function ImageTool({ support }: Props) {
             <h3 className="result__title">Preview</h3>
             {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
             <div className="mode" role="group" aria-label="Preview mode">
-              <button type="button" className="mode__button" aria-pressed={mode === "live"} onClick={() => setMode("live")}>
+              <button
+                type="button"
+                className="mode__button"
+                aria-pressed={mode === "live"}
+                onClick={() => setMode("live")}
+              >
                 Real HDR
               </button>
-              <button type="button" className="mode__button" aria-pressed={mode === "simulated"} onClick={() => setMode("simulated")}>
+              <button
+                type="button"
+                className="mode__button"
+                aria-pressed={mode === "simulated"}
+                onClick={() => setMode("simulated")}
+              >
                 Preview
               </button>
             </div>
@@ -600,7 +634,9 @@ export function ImageTool({ support }: Props) {
               beforeLabel="Original"
               afterLabel={mode === "live" ? "HDR" : "Preview"}
               sliderLabel="Drag to compare the original with the glowing version"
-              before={<canvas ref={beforeCanvas} className="compare__media" aria-label="Original image" />}
+              before={
+                <canvas ref={beforeCanvas} className="compare__media" aria-label="Original image" />
+              }
               after={
                 mode === "live" ? (
                   hdrFile.file ? (
@@ -609,7 +645,11 @@ export function ImageTool({ support }: Props) {
                     <div className="compare__empty">Building the HDR JPEG…</div>
                   )
                 ) : (
-                  <canvas ref={simulatedCanvas} className="compare__media" aria-label="Simulated glow" />
+                  <canvas
+                    ref={simulatedCanvas}
+                    className="compare__media"
+                    aria-label="Simulated glow"
+                  />
                 )
               }
             />
