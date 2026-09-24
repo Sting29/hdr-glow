@@ -1,7 +1,7 @@
 // Which browsers show the glow of an HDR JPEG on an HDR screen:
 // Chrome 137+ (and other Chromium browsers of that age) and Safari 26 / iOS 26.
 //
-// Only erasable TypeScript here: tools/check runs this file straight in Node.
+// No DOM or React in this file, so tools/check tests it in plain Node.
 
 export type BrowserInfo = {
   name: string;

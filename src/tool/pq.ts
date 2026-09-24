@@ -1,7 +1,7 @@
 // PQ (SMPTE ST 2084) pictures for LinkedIn: the same glow as the gain-map JPEG,
 // but written as absolute brightness, with an ICC profile that says so.
 //
-// Only erasable TypeScript here: tools/check runs this file straight in Node.
+// No DOM or React in this file, so tools/check tests it in plain Node.
 
 const M1 = 2610 / 16384;
 const M2 = (2523 / 4096) * 128;

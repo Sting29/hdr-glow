@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:lan": "vite --host",
     "build": "tsc --noEmit && vite build",
-    "check": "node tools/check/check.mjs",
+    "check": "vitest run",
     "preview": "vite preview",
     "lint": "oxlint",
     "format": "prettier --write .",
@@ -26,9 +26,10 @@
     "oxlint": "1.85.0",
     "prettier": "3.9.9",
     "typescript": "7.0.2",
-    "vite": "8.3.0"
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
   },
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.12"
   }
 }

@@ -1,6 +1,7 @@
 // Run: npm run check
-// Checks the pure image modules in Node (no browser, no build step).
+// Checks the pure image modules in Node with Vitest (no browser).
 import assert from "node:assert/strict";
+import { test } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   addGlowColor,
@@ -10,6 +11,7 @@ import {
   toHex,
 } from "../../src/tool/colors.ts";
 import { assembleGainMapJpeg, embedIccProfile } from "../../src/tool/container.ts";
+import { buildSwatch } from "../../src/tool/swatch.ts";
 import { encodeGrayJpeg, encodeRgbJpeg } from "../../src/tool/jpeg.ts";
 import { computeMask, suggestColors, toOklab } from "../../src/tool/mask.ts";
 import { detectBrowser } from "../../src/browserSupport.ts";
@@ -20,17 +22,6 @@ import {
   pqEncode,
   rec2020Colorants,
 } from "../../src/tool/pq.ts";
-
-let failed = 0;
-const test = (name, fn) => {
-  try {
-    fn();
-    console.log("ok   ", name);
-  } catch (error) {
-    failed++;
-    console.log("FAIL ", name, "\n     ", error.message);
-  }
-};
 
 // ---- container: must reproduce the libultrahdr swatch byte for byte ----
 const reference = new Uint8Array(
@@ -390,18 +381,6 @@ test("suggest: near-duplicate shades collapse into one suggestion", () => {
 });
 
 // ---- swatch: the user-adjustable background-clip: text swatch ----
-// Mirrors buildSwatch() in src/tool/swatch.ts. That file can't be imported here directly:
-// it imports container.ts/jpeg.ts by extensionless specifier for Vite, which Node's own
-// ESM loader (used to run this file) requires an extension for.
-const SWATCH_SIZE = 64;
-const buildSwatch = (boost) => {
-  const white = new Uint8Array(SWATCH_SIZE * SWATCH_SIZE * 3).fill(255);
-  const base = encodeRgbJpeg(white, SWATCH_SIZE, SWATCH_SIZE, 100);
-  const full = new Uint8Array(SWATCH_SIZE * SWATCH_SIZE).fill(255);
-  const gainMap = encodeGrayJpeg(full, SWATCH_SIZE, SWATCH_SIZE, 95);
-  return assembleGainMapJpeg({ base, gainMap, maxBoost: boost });
-};
-
 test("swatch: buildSwatch returns a JPEG that starts with SOI and ends with EOI", () => {
   const jpeg = buildSwatch(7.5);
   assert.deepEqual([jpeg[0], jpeg[1]], [0xff, 0xd8]);
@@ -466,9 +445,3 @@ test("sameColor: compares by value, not reference", () => {
   assert.ok(sameColor({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 3 }));
   assert.ok(!sameColor({ r: 1, g: 2, b: 3 }, { r: 1, g: 2, b: 4 }));
 });
-
-if (failed) {
-  console.log(`\n${failed} failed`);
-  process.exit(1);
-}
-console.log("\nall passed");

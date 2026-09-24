@@ -13,10 +13,14 @@ Everything, including the JPEG encoder, the gain-map container and the ICC profi
 from scratch in TypeScript and runs in a Web Worker. Nothing is uploaded anywhere.
 
     npm install
-    npm run dev        # http://localhost:5173
+    npm run dev        # http://localhost:5180
     npm run dev:lan    # same, reachable from a phone on your Wi-Fi
-    npm run check      # checks the image modules in Node, no browser needed
-    npm run build       # production build in dist/
+    npm run check      # tests for the image modules (Vitest, no browser needed)
+    npm run lint       # oxlint
+    npm run format     # Prettier (format:check only verifies)
+    npm run build      # type check + production build in dist/
+
+CI runs lint, format:check, check and build on every pull request. Node 22 (see `.nvmrc`).
 
 Check on an HDR screen (Chrome 137+, Safari 26 / iOS 26): the glowing parts should look brighter
 than white. On other screens and browsers the files still look like normal pictures.

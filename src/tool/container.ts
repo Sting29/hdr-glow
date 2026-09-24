@@ -1,9 +1,9 @@
 // Builds an Ultra HDR / ISO 21496-1 JPEG from a plain base JPEG and a plain
 // grayscale gain-map JPEG. The layout is copied from public/hdr-glow-swatch-7.5x.jpg,
 // which libultrahdr wrote (see tools/make-swatch), and checked byte for byte
-// by tools/check/check.mjs.
+// by tools/check/check.test.mjs.
 //
-// Only erasable TypeScript here: tools/check runs this file straight in Node.
+// No DOM or React in this file, so tools/check tests it in plain Node.
 
 // 588-byte sRGB profile, the one libultrahdr embeds in its base image.
 const SRGB_ICC_BASE64 =

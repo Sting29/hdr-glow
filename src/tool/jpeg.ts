@@ -4,7 +4,7 @@
 // manage the pixels, which would change the PQ values. This writes exactly the
 // bytes it is given: standard tables, no subsampling, JFIF header.
 //
-// Only erasable TypeScript here: tools/check runs this file straight in Node.
+// No DOM or React in this file, so tools/check tests it in plain Node.
 
 const ZIGZAG = [
   0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20,

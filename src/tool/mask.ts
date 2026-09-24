@@ -2,7 +2,7 @@
 // A pixel glows when its color is close to one of the chosen colors, measured
 // in OKLab so that "close" matches what the eye sees.
 //
-// Only erasable TypeScript here: tools/check runs this file straight in Node.
+// No DOM or React in this file, so tools/check tests it in plain Node.
 
 export type RGB = { r: number; g: number; b: number };
 
