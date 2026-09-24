@@ -2,7 +2,13 @@
 // Checks the pure image modules in Node (no browser, no build step).
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { addGlowColor, MAX_GLOW_COLORS, parseHex, sameColor } from "../../src/tool/colors.ts";
+import {
+  addGlowColor,
+  MAX_GLOW_COLORS,
+  parseHex,
+  sameColor,
+  toHex,
+} from "../../src/tool/colors.ts";
 import { assembleGainMapJpeg, embedIccProfile } from "../../src/tool/container.ts";
 import { encodeGrayJpeg, encodeRgbJpeg } from "../../src/tool/jpeg.ts";
 import { computeMask, suggestColors, toOklab } from "../../src/tool/mask.ts";
@@ -449,6 +455,11 @@ test("addGlowColor: stops at MAX_GLOW_COLORS", () => {
   const result = addGlowColor(list, { r: 250, g: 0, b: 0 });
   assert.equal(result, list, "a full list should not grow");
   assert.equal(result.length, MAX_GLOW_COLORS);
+});
+
+test("toHex: pads each channel and round-trips with parseHex", () => {
+  assert.equal(toHex({ r: 0, g: 10, b: 255 }), "#000aff");
+  assert.deepEqual(parseHex(toHex({ r: 168, g: 107, b: 255 })), { r: 168, g: 107, b: 255 });
 });
 
 test("sameColor: compares by value, not reference", () => {

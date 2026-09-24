@@ -3,6 +3,9 @@ import type { RGB } from "./mask";
 /** Upper bound on the glow color list: past this the mask gets slow to compute and the chip row gets unreadable. */
 export const MAX_GLOW_COLORS = 12;
 
+export const toHex = ({ r, g, b }: RGB) =>
+  `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+
 export const sameColor = (a: RGB, b: RGB) => a.r === b.r && a.g === b.g && a.b === b.b;
 
 /** Accepts "#fff", "fff", "#ffffff" or "ffffff"; null if it isn't a valid color. */
