@@ -32,6 +32,8 @@ export class Pipeline {
   private alpha = new Uint8Array(0);
   private lab: Float32Array = new Float32Array(0);
   private mask = new Uint8Array(0);
+  // The parameters the current mask was computed for, or "" when it is stale.
+  private maskFor = "";
 
   load(bitmap: ImageBitmap, background: string): LoadResult {
     this.bitmap?.close();
@@ -71,7 +73,7 @@ export class Pipeline {
 
   preview(params: MaskParams): PreviewResult {
     this.requireImage();
-    computeMask(this.lab, this.alpha, params, this.mask);
+    this.updateMask(params);
 
     const scale = Math.min(1, PREVIEW_SIDE / Math.max(this.width, this.height));
     const width = Math.max(1, Math.round(this.width * scale));
@@ -97,7 +99,7 @@ export class Pipeline {
   /** The finished HDR JPEG: the flattened picture plus a gain map made from the mask. */
   async build(params: MaskParams, stops: number): Promise<BuildResult> {
     this.requireImage();
-    computeMask(this.lab, this.alpha, params, this.mask);
+    this.updateMask(params);
     const blob = await this.flat!.convertToBlob({ type: "image/jpeg", quality: BASE_QUALITY });
     const base = new Uint8Array(await blob.arrayBuffer());
     // Gain map 0 = no boost, 255 = full boost, so the mask is the gain map as it is.
@@ -112,7 +114,7 @@ export class Pipeline {
    */
   buildPq(params: MaskParams, stops: number): BuildResult {
     this.requireImage();
-    computeMask(this.lab, this.alpha, params, this.mask);
+    this.updateMask(params);
     const rgb = encodePq(this.rgba, this.mask, stops);
     const jpeg = embedIccProfile(encodeRgbJpeg(rgb, this.width, this.height, PQ_QUALITY), createPqProfile());
     return { jpeg: jpeg as Uint8Array<ArrayBuffer> };
@@ -128,6 +130,15 @@ export class Pipeline {
     this.flat = canvas;
     this.rgba = context.getImageData(0, 0, this.width, this.height).data;
     this.lab = toOklab(this.rgba);
+    this.maskFor = "";
+  }
+
+  /** The preview and both builds of one slider position share a single mask computation. */
+  private updateMask({ colors, tolerance, softness }: MaskParams): void {
+    const key = `${colors.map((c) => `${c.r},${c.g},${c.b}`).join(";")}|${tolerance}|${softness}`;
+    if (key === this.maskFor) return;
+    computeMask(this.lab, this.alpha, { colors, tolerance, softness }, this.mask);
+    this.maskFor = key;
   }
 
   private requireImage(): void {
