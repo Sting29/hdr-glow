@@ -19,6 +19,8 @@ import {
 export function useImageSession() {
   const workerRef = useRef<ImageWorker | null>(null);
   const appliedBackground = useRef("#000000");
+  // Numbers each load, so a slow older one cannot overwrite a newer one that finished first.
+  const latestLoad = useRef(0);
 
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
   const [fileName, setFileName] = useState("logo");
@@ -59,6 +61,8 @@ export function useImageSession() {
   const loadFile = async (file: File, onLoaded: (info: LoadResult) => void) => {
     const worker = workerRef.current;
     if (!worker) return;
+    const loadId = ++latestLoad.current;
+    const isStale = () => loadId !== latestLoad.current;
     setError("");
     const svg = isSvg(file);
     const sizeLimit = svg ? MAX_SVG_BYTES : MAX_FILE_BYTES;
@@ -71,6 +75,10 @@ export function useImageSession() {
     let decoded: ImageBitmap | null = null;
     try {
       decoded = svg ? await rasterizeSvg(file) : await createImageBitmap(file);
+      if (isStale()) {
+        decoded.close();
+        return;
+      }
       const { width, height } = decoded;
       if (width * height > MAX_MEGAPIXELS * 1_000_000) {
         setError(
@@ -80,6 +88,10 @@ export function useImageSession() {
         return;
       }
       const info = await worker.load(decoded, background);
+      if (isStale()) {
+        decoded.close();
+        return;
+      }
       const accepted = decoded;
       decoded = null;
       appliedBackground.current = background;
