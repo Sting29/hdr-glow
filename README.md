@@ -12,6 +12,10 @@ Make colors brighter than white on HDR screens, in the browser, with no backend:
 Everything, including the JPEG encoder, the gain-map container and the ICC profile, is written
 from scratch in TypeScript and runs in a Web Worker. Nothing is uploaded anywhere.
 
+The hosted site at glow.bereg.dev counts visits with Cloudflare Web Analytics (no cookies, no
+personal data). Your images are never sent anywhere, and the code in this repository has no
+analytics of its own.
+
     npm install
     npm run dev        # http://localhost:5180
     npm run dev:lan    # same, reachable from a phone on your Wi-Fi
